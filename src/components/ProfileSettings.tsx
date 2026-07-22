@@ -65,6 +65,7 @@ export const ProfileSettings: React.FC = () => {
     if (!cropSrc) return;
 
     const img = new Image();
+    img.crossOrigin = 'anonymous';
     img.src = cropSrc;
     img.onload = () => {
       const canvas = document.createElement('canvas');
@@ -101,41 +102,53 @@ export const ProfileSettings: React.FC = () => {
 
           const croppedFile = new File([blob], 'avatar.jpg', { type: 'image/jpeg' });
 
+          // Tentar obter usuário logado do Supabase Auth
+          let activeUser = null;
           if (supabase) {
             try {
-              const { data: { user } } = await supabase.auth.getUser();
-              if (user) {
-                // Sincroniza com a política RLS do bucket (user_id/avatar-timestamp.jpg)
-                const filePath = `${user.id}/avatar-${Date.now()}.jpg`;
+              const { data } = await supabase.auth.getUser();
+              activeUser = data.user;
+            } catch (e) {
+              console.warn("Sem sessão ativa no Supabase:", e);
+            }
+          }
 
-                showToast('Enviando imagem...');
+          if (supabase && activeUser) {
+            try {
+              // Sincroniza com a política RLS do bucket (user_id/avatar-timestamp.jpg)
+              const filePath = `${activeUser.id}/avatar-${Date.now()}.jpg`;
 
-                const { error: uploadError } = await supabase.storage
-                  .from('avatars')
-                  .upload(filePath, croppedFile, { cacheControl: '3600', upsert: true });
+              showToast('Enviando imagem...');
 
-                if (uploadError) {
-                  console.error(uploadError);
-                  showToast('Erro ao enviar imagem ao Supabase.');
-                  return;
-                }
+              const { error: uploadError } = await supabase.storage
+                .from('avatars')
+                .upload(filePath, croppedFile, { cacheControl: '3600', upsert: true });
 
-                const { data: { publicUrl } } = supabase.storage
-                  .from('avatars')
-                  .getPublicUrl(filePath);
-
-                setAvatar(publicUrl);
-                showToast('Avatar carregado no Supabase!');
+              if (uploadError) {
+                console.error(uploadError);
+                showToast('Erro ao enviar imagem ao Supabase.');
+                return;
               }
+
+              const { data: { publicUrl } } = supabase.storage
+                .from('avatars')
+                .getPublicUrl(filePath);
+
+              setAvatar(publicUrl);
+              updateProfile(username, publicUrl);
+              showToast('Avatar atualizado no Supabase!');
             } catch (err) {
               console.error(err);
               showToast('Erro ao salvar imagem no servidor.');
             }
           } else {
+            // Se offline ou usando Acesso Rápido (Alex), salva localmente no LocalStorage como Base64
             const reader = new FileReader();
             reader.onloadend = () => {
-              setAvatar(reader.result as string);
-              showToast('Avatar comprimido localmente!');
+              const base64Url = reader.result as string;
+              setAvatar(base64Url);
+              updateProfile(username, base64Url);
+              showToast('Avatar atualizado localmente!');
             };
             reader.readAsDataURL(croppedFile);
           }
