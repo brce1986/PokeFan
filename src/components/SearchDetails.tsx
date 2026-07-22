@@ -2,6 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { useApp } from '../context/AppContext';
 import { pokemonApi, type TCGCard } from '../services/pokemonApi';
 import { ArrowLeft, Search, Share2, Plus, Minus, Check, TrendingUp, Info } from 'lucide-react';
+import { sanitizeInput, isValidCardId } from '../utils/security';
 
 // Helpers para gradients baseados nos tipos do Pokémon
 const TYPE_GRADIENTS: Record<string, string> = {
@@ -63,6 +64,11 @@ export const SearchDetails: React.FC = () => {
       setCardInfo(null);
       return;
     }
+    // Validar ID da carta para evitar injeções ou caminhos arbitrários
+    if (!isValidCardId(selectedCardId)) {
+      setSelectedCardId(null);
+      return;
+    }
     const loadCardDetails = async () => {
       try {
         const data = await pokemonApi.getCardById(selectedCardId);
@@ -85,10 +91,15 @@ export const SearchDetails: React.FC = () => {
   };
 
   const handleSearch = async (query: string) => {
+    const cleanQuery = sanitizeInput(query);
+    if (!cleanQuery) {
+      setSearchResults([]);
+      return;
+    }
     setLoadingSearch(true);
     try {
-      const result = await pokemonApi.searchCards(query);
-      setSearchResults(result.data);
+      const result = await pokemonApi.searchCards(cleanQuery);
+      setSearchResults(result.data || []);
     } catch (err) {
       console.error(err);
     } finally {

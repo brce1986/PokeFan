@@ -1,6 +1,8 @@
 import React, { useState } from 'react';
 import { useApp, DEFAULT_AVATARS } from '../context/AppContext';
 import { User, CreditCard, Bell, LogOut, Check, Save, Download, Trash2, Camera } from 'lucide-react';
+import { supabase } from '../services/supabaseClient';
+import { sanitizeInput } from '../utils/security';
 
 export const ProfileSettings: React.FC = () => {
   const {
@@ -21,60 +23,130 @@ export const ProfileSettings: React.FC = () => {
   const [toastMessage, setToastMessage] = useState<string | null>(null);
   const [isEditingProfile, setIsEditingProfile] = useState(false);
 
+  // Estados de Crop e Redimensionamento
+  const [cropSrc, setCropSrc] = useState<string | null>(null);
+  const [zoom, setZoom] = useState(1.0);
+  const [panX, setPanX] = useState(0);
+  const [panY, setPanY] = useState(0);
+  const [isDragging, setIsDragging] = useState(false);
+  const [dragStart, setDragStart] = useState({ x: 0, y: 0 });
+
   const handleSaveProfile = () => {
-    updateProfile(username, avatar);
+    const cleanUsername = sanitizeInput(username);
+    if (!cleanUsername) {
+      showToast('Nome de usuário inválido.');
+      return;
+    }
+    updateProfile(cleanUsername, avatar);
     setIsEditingProfile(false);
     showToast('Perfil atualizado com sucesso!');
   };
 
-  const handleFileChange = async (e: React.ChangeEvent<HTMLInputElement>) => {
+  const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
     if (!file) return;
 
-    // Se Supabase estiver disponível, faz upload para o bucket
-    const { supabase } = await import('../services/supabaseClient');
-    if (supabase) {
-      try {
-        const { data: { user } } = await supabase.auth.getUser();
-        if (user) {
-          const fileExt = file.name.split('.').pop();
-          const fileName = `${user.id}-${Date.now()}.${fileExt}`;
-          const filePath = `${fileName}`;
+    if (!file.type.startsWith('image/')) {
+      showToast('Por favor, selecione um arquivo de imagem válido.');
+      return;
+    }
 
-          showToast('Enviando imagem...');
+    const reader = new FileReader();
+    reader.onloadend = () => {
+      setCropSrc(reader.result as string);
+      setZoom(1.0);
+      setPanX(0);
+      setPanY(0);
+    };
+    reader.readAsDataURL(file);
+  };
 
-          // Upload do arquivo para o bucket 'avatars'
-          const { error: uploadError } = await supabase.storage
-            .from('avatars')
-            .upload(filePath, file, { cacheControl: '3600', upsert: true });
+  const handleConfirmCrop = () => {
+    if (!cropSrc) return;
 
-          if (uploadError) {
-            console.error('Erro de upload Supabase:', uploadError);
-            showToast('Erro ao enviar imagem ao Supabase Storage.');
-            return;
+    const img = new Image();
+    img.src = cropSrc;
+    img.onload = () => {
+      const canvas = document.createElement('canvas');
+      const size = 200; // Foto de perfil comprimida em 200x200
+      canvas.width = size;
+      canvas.height = size;
+      const ctx = canvas.getContext('2d');
+
+      if (ctx) {
+        ctx.fillStyle = '#f3f4f6';
+        ctx.fillRect(0, 0, size, size);
+
+        const imgRatio = img.width / img.height;
+        let drawW = size;
+        let drawH = size;
+        if (imgRatio > 1) {
+          drawW = size * imgRatio;
+        } else {
+          drawH = size / imgRatio;
+        }
+
+        drawW *= zoom;
+        drawH *= zoom;
+
+        const scaleFactor = size / 192; // visor é 192px na UI
+        const dx = (size - drawW) / 2 + panX * scaleFactor;
+        const dy = (size - drawH) / 2 + panY * scaleFactor;
+
+        ctx.drawImage(img, dx, dy, drawW, drawH);
+
+        // Compressão em JPEG a 80% de qualidade
+        canvas.toBlob(async (blob) => {
+          if (!blob) return;
+
+          const croppedFile = new File([blob], 'avatar.jpg', { type: 'image/jpeg' });
+
+          if (supabase) {
+            try {
+              const { data: { user } } = await supabase.auth.getUser();
+              if (user) {
+                // Sincroniza com a política RLS do bucket (user_id/avatar-timestamp.jpg)
+                const filePath = `${user.id}/avatar-${Date.now()}.jpg`;
+
+                showToast('Enviando imagem...');
+
+                const { error: uploadError } = await supabase.storage
+                  .from('avatars')
+                  .upload(filePath, croppedFile, { cacheControl: '3600', upsert: true });
+
+                if (uploadError) {
+                  console.error(uploadError);
+                  showToast('Erro ao enviar imagem ao Supabase.');
+                  return;
+                }
+
+                const { data: { publicUrl } } = supabase.storage
+                  .from('avatars')
+                  .getPublicUrl(filePath);
+
+                setAvatar(publicUrl);
+                showToast('Avatar carregado no Supabase!');
+              }
+            } catch (err) {
+              console.error(err);
+              showToast('Erro ao salvar imagem no servidor.');
+            }
+          } else {
+            const reader = new FileReader();
+            reader.onloadend = () => {
+              setAvatar(reader.result as string);
+              showToast('Avatar comprimido localmente!');
+            };
+            reader.readAsDataURL(croppedFile);
           }
 
-          // Obter URL pública
-          const { data: { publicUrl } } = supabase.storage
-            .from('avatars')
-            .getPublicUrl(filePath);
-
-          setAvatar(publicUrl);
-          showToast('Imagem carregada no Supabase!');
-        }
-      } catch (err) {
-        console.error('Erro geral no upload Supabase:', err);
-        showToast('Erro de conexão ao enviar imagem.');
+          setCropSrc(null);
+          setZoom(1.0);
+          setPanX(0);
+          setPanY(0);
+        }, 'image/jpeg', 0.8);
       }
-    } else {
-      // Fallback local via FileReader (Base64)
-      const reader = new FileReader();
-      reader.onloadend = () => {
-        setAvatar(reader.result as string);
-        showToast('Imagem carregada localmente!');
-      };
-      reader.readAsDataURL(file);
-    }
+    };
   };
 
   const handleExport = () => {
@@ -315,6 +387,100 @@ export const ProfileSettings: React.FC = () => {
           Limpar Minha Coleção
         </button>
       </section>
+
+      {/* CROP & COMPRESS MODAL */}
+      {cropSrc && (
+        <div className="fixed inset-0 z-50 bg-black/80 flex flex-col items-center justify-center p-4 animate-fade-in select-none">
+          <div className="bg-surface-container-lowest rounded-3xl p-5 w-full max-w-sm border border-outline-variant/15 space-y-4 shadow-2xl">
+            <div className="text-center">
+              <h3 className="font-extrabold text-sm text-on-surface">Ajustar Foto de Perfil</h3>
+              <p className="text-[9px] text-on-surface-variant font-bold uppercase tracking-wider mt-0.5">Arraste para posicionar e use o slider para zoom</p>
+            </div>
+
+            {/* Circular Viewport */}
+            <div 
+              className="w-48 h-48 rounded-full border-4 border-primary overflow-hidden relative bg-neutral-900 mx-auto shadow-inner cursor-move touch-none"
+              onMouseDown={(e) => {
+                setIsDragging(true);
+                setDragStart({ x: e.clientX - panX, y: e.clientY - panY });
+              }}
+              onMouseMove={(e) => {
+                if (!isDragging) return;
+                setPanX(e.clientX - dragStart.x);
+                setPanY(e.clientY - dragStart.y);
+              }}
+              onMouseUp={() => setIsDragging(false)}
+              onMouseLeave={() => setIsDragging(false)}
+              onTouchStart={(e) => {
+                if (e.touches.length === 1) {
+                  setIsDragging(true);
+                  setDragStart({ x: e.touches[0].clientX - panX, y: e.touches[0].clientY - panY });
+                }
+              }}
+              onTouchMove={(e) => {
+                if (!isDragging || e.touches.length !== 1) return;
+                setPanX(e.touches[0].clientX - dragStart.x);
+                setPanY(e.touches[0].clientY - dragStart.y);
+              }}
+              onTouchEnd={() => setIsDragging(false)}
+            >
+              <img 
+                src={cropSrc} 
+                alt="Preview" 
+                className="absolute origin-center pointer-events-none"
+                style={{
+                  transform: `translate(${panX}px, ${panY}px) scale(${zoom})`,
+                  top: '0',
+                  left: '0',
+                  width: '100%',
+                  height: '100%',
+                  objectFit: 'cover'
+                }}
+              />
+            </div>
+
+            {/* Slider de Zoom */}
+            <div className="space-y-1.5 px-2">
+              <div className="flex justify-between text-[9px] font-black text-on-surface-variant uppercase tracking-wider">
+                <span>Zoom</span>
+                <span>{zoom.toFixed(1)}x</span>
+              </div>
+              <input 
+                type="range" 
+                min="1.0" 
+                max="3.0" 
+                step="0.1" 
+                value={zoom} 
+                onChange={(e) => setZoom(parseFloat(e.target.value))}
+                className="w-full accent-primary bg-surface-container-high rounded-lg h-2"
+              />
+            </div>
+
+            {/* Ações */}
+            <div className="grid grid-cols-2 gap-3 pt-2">
+              <button
+                type="button"
+                onClick={() => {
+                  setCropSrc(null);
+                  setZoom(1.0);
+                  setPanX(0);
+                  setPanY(0);
+                }}
+                className="py-3 bg-surface-container-low hover:bg-surface-container-high text-on-surface-variant font-extrabold text-[10px] rounded-2xl transition-all uppercase tracking-wider active:scale-[0.98]"
+              >
+                Cancelar
+              </button>
+              <button
+                type="button"
+                onClick={handleConfirmCrop}
+                className="py-3 bg-primary hover:bg-primary-container text-white font-extrabold text-[10px] rounded-2xl shadow-md transition-all uppercase tracking-wider active:scale-[0.98]"
+              >
+                Recortar & Salvar
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
 
     </div>
   );

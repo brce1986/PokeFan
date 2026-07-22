@@ -2,11 +2,12 @@ import React, { useState } from 'react';
 import { useApp } from '../context/AppContext';
 import { pokemonApi, type TCGCard } from '../services/pokemonApi';
 import { Scan as ScanIcon, Upload, X, Plus, Minus, Check, Camera } from 'lucide-react';
+import { sanitizeFileName } from '../utils/security';
 
 // Mapeamento dos arquivos locais para IDs de cartas reais da API
 const LOCAL_FILE_MAPPINGS: Record<string, { id: string; name: string }> = {
-  'SV05_EN_1.png': { id: 'sv5-10', name: 'Turtwig' },
-  'SV05_EN_10.png': { id: 'sv5-17', name: 'Sawsbuck' },
+  'SV05_EN_1.png': { id: 'sv5-1', name: 'Turtwig' },
+  'SV05_EN_10.png': { id: 'sv5-10', name: 'Sawsbuck' },
   'SV05_EN_12.png': { id: 'sv5-12', name: 'Deerling' },
   'JL2G_EN_19.png': { id: 'swsh9-182', name: 'Galarian Zapdos V' },
   'JL2G_EN_26.png': { id: 'sv3pt5-6', name: 'Charizard ex' },
@@ -36,6 +37,7 @@ export const Scan: React.FC = () => {
 
   // Manipular upload ou escolha de arquivo para simular escaneamento
   const handleFileScan = async (fileName: string) => {
+    const cleanFileName = sanitizeFileName(fileName);
     setIsProcessing(true);
     
     // Simular o flash da câmera
@@ -44,7 +46,7 @@ export const Scan: React.FC = () => {
 
     try {
       // Obter id mapeado ou escolher aleatório de mock
-      const mapped = LOCAL_FILE_MAPPINGS[fileName];
+      const mapped = LOCAL_FILE_MAPPINGS[cleanFileName];
       const cardId = mapped ? mapped.id : 'sv03pt5-006'; // Charizard ex se não achar
 
       // Chamar API para obter dados reais da carta

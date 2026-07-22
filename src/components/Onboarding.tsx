@@ -1,6 +1,7 @@
 import React, { useState } from 'react';
 import { useApp } from '../context/AppContext';
 import { Eye, EyeOff, UserPlus, LogIn, ChevronRight } from 'lucide-react';
+import { sanitizeInput } from '../utils/security';
 
 export const Onboarding: React.FC = () => {
   const { login, register } = useApp();
@@ -22,11 +23,12 @@ export const Onboarding: React.FC = () => {
   const handleLogin = async (e: React.FormEvent) => {
     e.preventDefault();
     setLoginError('');
-    if (!loginEmail || !loginPassword) {
+    const cleanEmail = sanitizeInput(loginEmail);
+    if (!cleanEmail || !loginPassword) {
       setLoginError('Por favor, preencha todos os campos.');
       return;
     }
-    const result = login(loginEmail, loginPassword);
+    const result = login(cleanEmail, loginPassword);
     const success = result instanceof Promise ? await result : result;
     if (!success) {
       setLoginError('Credenciais inválidas. Para testar, use o e-mail: alex.trainer@pokevault.app e senha: 123456');
@@ -36,11 +38,13 @@ export const Onboarding: React.FC = () => {
   const handleRegister = async (e: React.FormEvent) => {
     e.preventDefault();
     setRegError('');
-    if (!regUsername || !regEmail || !regPassword) {
+    const cleanUsername = sanitizeInput(regUsername);
+    const cleanEmail = sanitizeInput(regEmail);
+    if (!cleanUsername || !cleanEmail || !regPassword) {
       setRegError('Por favor, preencha todos os campos.');
       return;
     }
-    const result = register(regUsername, regEmail, regPassword, regAvatar);
+    const result = register(cleanUsername, cleanEmail, regPassword, regAvatar);
     const success = result instanceof Promise ? await result : result;
     if (!success) {
       setRegError('Este e-mail já está cadastrado.');
