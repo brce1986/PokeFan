@@ -102,7 +102,7 @@ export const Scan: React.FC = () => {
       </div>
 
       {/* 1. FAUX CAMERA FEED NO TAMANHO DA PROPORÇÃO DA CARTA */}
-      <div className="relative w-[210px] aspect-[63/88] bg-black rounded-3xl overflow-hidden shadow-lg border-4 border-white flex flex-col justify-center items-center">
+      <div className="relative w-[260px] aspect-[63/88] bg-black rounded-3xl overflow-hidden shadow-lg border-4 border-white flex flex-col justify-center items-center">
         
         {/* FAUX CAMERA BACKGROUND */}
         <div className="absolute inset-0 z-0 bg-neutral-900 flex items-center justify-center overflow-hidden">
