@@ -1,4 +1,5 @@
 import type { TCGCard } from './pokemonApi';
+import { supabase } from './supabaseClient';
 
 export interface LigaPokemonPrice {
   priceMin: number;
@@ -7,10 +8,10 @@ export interface LigaPokemonPrice {
   cardName: string;
   editionName: string;
   lastUpdated: string;
-  isReal: boolean; // true se veio do Apify, false se foi estimado/conversão
+  isReal: boolean; // true se veio do banco (Apify centralizado), false se foi estimado
 }
 
-// Chave para cache local de preços da LigaPokémon
+// Chave para cache local de preços da LigaPokémon (LocalStorage)
 const LIGA_PRICE_CACHE_KEY = 'pokefan_liga_prices_cache';
 
 const getCache = (): Record<string, LigaPokemonPrice> => {
@@ -31,15 +32,15 @@ const saveCache = (cache: Record<string, LigaPokemonPrice>) => {
 export const ligaPokemonApi = {
   /**
    * Obtém o preço da carta na LigaPokémon.
-   * Se houver token do Apify, faz a chamada real.
-   * Senão, calcula o preço estimado BRL multiplicando o USD do TCGplayer por uma taxa média
-   * e salvando no cache local.
+   * 1. Consulta o cache local (LocalStorage).
+   * 2. Se não estiver no cache (ou expirar), consulta a tabela centralizada no Supabase.
+   * 3. Se não houver no banco ou estiver sem internet, estima convertendo o dólar do TCGplayer.
    */
   async getCardPrice(card: TCGCard, forceRefresh = false): Promise<LigaPokemonPrice> {
     const cache = getCache();
     const cacheKey = card.id;
 
-    // Se já tiver preço no cache e ele tiver menos de 24 horas, e não for forçado o refresh, usa o cache
+    // 1. Verificar Cache do LocalStorage (24h)
     if (!forceRefresh && cache[cacheKey]) {
       const cacheTime = new Date(cache[cacheKey].lastUpdated).getTime();
       const now = Date.now();
@@ -48,65 +49,42 @@ export const ligaPokemonApi = {
       }
     }
 
-    const apifyToken = import.meta.env.VITE_APIFY_TOKEN || localStorage.getItem('pokefan_apify_token');
-
-    if (apifyToken) {
+    // 2. Se o Supabase estiver ativo, buscar na tabela centralizada ligapokemon_prices
+    if (supabase) {
       try {
-        const queryText = `${card.name} ${card.number}`;
-        
-        // Chamada síncrona ao endpoint do Apify para o scraper da LigaPokémon
-        const response = await fetch(`https://api.apify.com/v2/actors/gio21~ligapokemon-scraper/run-sync-get-dataset-items?token=${apifyToken}&timeout=60`, {
-          method: 'POST',
-          headers: {
-            'Content-Type': 'application/json',
-          },
-          body: JSON.stringify({
-            query: queryText,
-            language: 'any',
-            maxItems: 3
-          })
-        });
+        const { data, error } = await supabase
+          .from('ligapokemon_prices')
+          .select('*')
+          .eq('card_id', card.id)
+          .maybeSingle();
 
-        if (response.ok) {
-          const items = await response.json();
-          if (Array.isArray(items) && items.length > 0) {
-            // Encontra a melhor correspondência de item (toma o primeiro item retornado)
-            const matchedItem = items[0];
-            
-            const priceMin = parseFloat(matchedItem.priceMin || matchedItem.minPrice || '0') || 0;
-            const priceAvg = parseFloat(matchedItem.priceAvg || matchedItem.avgPrice || '0') || 0;
-            const priceMax = parseFloat(matchedItem.priceMax || matchedItem.maxPrice || '0') || 0;
+        if (!error && data) {
+          const dbPrice: LigaPokemonPrice = {
+            priceMin: Number(data.price_min),
+            priceAvg: Number(data.price_avg),
+            priceMax: Number(data.price_max),
+            cardName: card.name,
+            editionName: card.set?.name || 'Promo',
+            lastUpdated: data.updated_at,
+            isReal: true
+          };
 
-            if (priceAvg > 0) {
-              const newPrice: LigaPokemonPrice = {
-                priceMin: priceMin || priceAvg * 0.85,
-                priceAvg,
-                priceMax: priceMax || priceAvg * 1.15,
-                cardName: matchedItem.name || card.name,
-                editionName: matchedItem.edition || card.set?.name || 'Promo',
-                lastUpdated: new Date().toISOString(),
-                isReal: true
-              };
-
-              cache[cacheKey] = newPrice;
-              saveCache(cache);
-              return newPrice;
-            }
-          }
+          cache[cacheKey] = dbPrice;
+          saveCache(cache);
+          return dbPrice;
         }
       } catch (err) {
-        console.warn("Erro ao acessar scraper do Apify para LigaPokémon:", err);
+        console.warn("Erro ao carregar preco centralizado da Liga no Supabase:", err);
       }
     }
 
-    // --- FALLBACK ESTIMADO ---
-    // Pega o preço base em USD do TCGplayer
+    // 3. FALLBACK ESTIMADO (BRL baseada em TCGplayer USD)
     const usdPrice = card.tcgplayer?.prices?.holofoil?.market || 
                      card.tcgplayer?.prices?.normal?.market || 
                      card.tcgplayer?.prices?.reverseHolofoil?.market || 
                      5.00;
 
-    // Fator de conversão BRL considerando cotação e custos locais (aprox. 1 USD = 6.2 BRL)
+    // Taxa de conversão estimada em BRL considerando frete e ágio de mercado
     const conversionFactor = 6.2;
     const estimatedAvg = usdPrice * conversionFactor;
 
