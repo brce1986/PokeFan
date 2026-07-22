@@ -1,6 +1,6 @@
 import React, { useState } from 'react';
-import { useApp, DEFAULT_AVATARS } from '../context/AppContext';
-import { Eye, EyeOff, UserPlus, LogIn, ChevronRight, Sparkles } from 'lucide-react';
+import { useApp } from '../context/AppContext';
+import { Eye, EyeOff, UserPlus, LogIn, ChevronRight } from 'lucide-react';
 
 export const Onboarding: React.FC = () => {
   const { login, register } = useApp();
@@ -16,7 +16,7 @@ export const Onboarding: React.FC = () => {
   const [regUsername, setRegUsername] = useState('');
   const [regEmail, setRegEmail] = useState('');
   const [regPassword, setRegPassword] = useState('');
-  const [regAvatar, setRegAvatar] = useState(DEFAULT_AVATARS[0]);
+  const [regAvatar] = useState("data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='%239ca3af'><path d='M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm0 4c1.93 0 3.5 1.57 3.5 3.5S13.93 13 12 13s-3.5-1.57-3.5-3.5S10.07 6 12 6zm0 14c-2.03 0-4.43-.82-6.14-2.88C7.55 15.8 9.68 15 12 15s4.45.8 6.14 2.12C16.43 19.18 14.03 20 12 20z'/></svg>");
   const [regError, setRegError] = useState('');
 
   const handleLogin = async (e: React.FormEvent) => {
@@ -198,33 +198,6 @@ export const Onboarding: React.FC = () => {
             )}
 
             <form onSubmit={handleRegister} className="space-y-4">
-              {/* Avatar Selector */}
-              <div>
-                <label className="block text-[11px] font-bold text-on-surface-variant uppercase tracking-wider mb-2">
-                  Escolha seu Avatar de Treinador
-                </label>
-                <div className="flex justify-around gap-2 p-2 bg-surface-container-low rounded-2xl border border-outline-variant/20">
-                  {DEFAULT_AVATARS.map((avatarUrl, i) => (
-                    <button
-                      key={i}
-                      type="button"
-                      onClick={() => setRegAvatar(avatarUrl)}
-                      className={`relative rounded-full overflow-hidden w-12 h-12 transition-transform duration-200 ${
-                        regAvatar === avatarUrl 
-                          ? 'scale-110 ring-4 ring-primary' 
-                          : 'opacity-70 hover:opacity-100 hover:scale-105'
-                      }`}
-                    >
-                      <img src={avatarUrl} alt={`Avatar ${i+1}`} className="w-full h-full object-cover" />
-                      {regAvatar === avatarUrl && (
-                        <div className="absolute inset-0 bg-primary/20 flex items-center justify-center">
-                          <Sparkles className="text-white w-4 h-4 animate-spin-slow" />
-                        </div>
-                      )}
-                    </button>
-                  ))}
-                </div>
-              </div>
 
               <div>
                 <label className="block text-[11px] font-bold text-on-surface-variant uppercase tracking-wider mb-1">

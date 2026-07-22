@@ -1,6 +1,6 @@
 import React, { useState } from 'react';
 import { useApp, DEFAULT_AVATARS } from '../context/AppContext';
-import { User, CreditCard, Bell, LogOut, Check, Save, Download, Trash2 } from 'lucide-react';
+import { User, CreditCard, Bell, LogOut, Check, Save, Download, Trash2, Camera } from 'lucide-react';
 
 export const ProfileSettings: React.FC = () => {
   const {
@@ -25,6 +25,56 @@ export const ProfileSettings: React.FC = () => {
     updateProfile(username, avatar);
     setIsEditingProfile(false);
     showToast('Perfil atualizado com sucesso!');
+  };
+
+  const handleFileChange = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+
+    // Se Supabase estiver disponível, faz upload para o bucket
+    const { supabase } = await import('../services/supabaseClient');
+    if (supabase) {
+      try {
+        const { data: { user } } = await supabase.auth.getUser();
+        if (user) {
+          const fileExt = file.name.split('.').pop();
+          const fileName = `${user.id}-${Date.now()}.${fileExt}`;
+          const filePath = `${fileName}`;
+
+          showToast('Enviando imagem...');
+
+          // Upload do arquivo para o bucket 'avatars'
+          const { error: uploadError } = await supabase.storage
+            .from('avatars')
+            .upload(filePath, file, { cacheControl: '3600', upsert: true });
+
+          if (uploadError) {
+            console.error('Erro de upload Supabase:', uploadError);
+            showToast('Erro ao enviar imagem ao Supabase Storage.');
+            return;
+          }
+
+          // Obter URL pública
+          const { data: { publicUrl } } = supabase.storage
+            .from('avatars')
+            .getPublicUrl(filePath);
+
+          setAvatar(publicUrl);
+          showToast('Imagem carregada no Supabase!');
+        }
+      } catch (err) {
+        console.error('Erro geral no upload Supabase:', err);
+        showToast('Erro de conexão ao enviar imagem.');
+      }
+    } else {
+      // Fallback local via FileReader (Base64)
+      const reader = new FileReader();
+      reader.onloadend = () => {
+        setAvatar(reader.result as string);
+        showToast('Imagem carregada localmente!');
+      };
+      reader.readAsDataURL(file);
+    }
   };
 
   const handleExport = () => {
@@ -64,21 +114,24 @@ export const ProfileSettings: React.FC = () => {
           <img 
             alt="Trainer Avatar" 
             src={avatar} 
-            className="w-full h-full rounded-full object-cover border-4 border-white shadow-md"
+            className="w-full h-full rounded-full object-cover border-4 border-white shadow-md bg-neutral-100"
+          />
+          <input 
+            type="file" 
+            accept="image/*" 
+            id="avatar-file-input" 
+            className="hidden" 
+            onChange={handleFileChange}
+            disabled={!isEditingProfile}
           />
           {isEditingProfile && (
-            <div className="absolute inset-0 bg-black/40 rounded-full flex flex-wrap gap-1 p-1 justify-center items-center overflow-hidden">
-              {DEFAULT_AVATARS.map((av, i) => (
-                <button
-                  key={i}
-                  type="button"
-                  onClick={() => setAvatar(av)}
-                  className="w-8 h-8 rounded-full border border-white overflow-hidden active:scale-90 transition-transform"
-                >
-                  <img src={av} alt="option" className="w-full h-full object-cover" />
-                </button>
-              ))}
-            </div>
+            <label 
+              htmlFor="avatar-file-input" 
+              className="absolute inset-0 bg-black/50 rounded-full flex flex-col items-center justify-center text-white cursor-pointer active:scale-95 transition-transform"
+            >
+              <Camera size={20} />
+              <span className="text-[8px] font-black uppercase mt-1">Galeria</span>
+            </label>
           )}
         </div>
 
