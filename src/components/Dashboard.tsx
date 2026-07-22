@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import { useApp } from '../context/AppContext';
 import { MOCK_SETS } from '../services/pokemonApi';
 import { Scan, Search, TrendingUp, ChevronRight, BookOpen, Sparkles, Award } from 'lucide-react';
@@ -14,6 +14,25 @@ export const Dashboard: React.FC = () => {
 
   const [timeframe, setTimeframe] = useState<'7d' | '30d' | 'all'>('7d');
   const [isDropdownOpen, setIsDropdownOpen] = useState(false);
+
+  // Ref e estado para largura dinâmica do gráfico
+  const chartContainerRef = useRef<HTMLDivElement>(null);
+  const [chartWidth, setChartWidth] = useState(500);
+
+  useEffect(() => {
+    if (!chartContainerRef.current) return;
+    const updateWidth = () => {
+      if (chartContainerRef.current) {
+        setChartWidth(chartContainerRef.current.getBoundingClientRect().width);
+      }
+    };
+    const timer = setTimeout(updateWidth, 50);
+    window.addEventListener('resize', updateWidth);
+    return () => {
+      clearTimeout(timer);
+      window.removeEventListener('resize', updateWidth);
+    };
+  }, []);
 
   // Calcular valor total da coleção
   const getCollectionValue = () => {
@@ -76,12 +95,11 @@ export const Dashboard: React.FC = () => {
   const valRange = maxVal - minVal || 1;
 
   // Gerar path do SVG para o gráfico de linha e de área
-  const width = 500;
   const height = 120;
   
   const points = activePoints.map((point, index) => {
-    const x = (index / (activePoints.length - 1)) * width;
-    const y = height - ((point.value - minVal) / valRange) * height;
+    const x = (index / (activePoints.length - 1)) * chartWidth;
+    const y = height - ((point.value - minVal) / valRange) * (height - 16) - 8; // Margem para os círculos não cortarem
     return { x, y, ...point };
   });
 
@@ -127,8 +145,8 @@ export const Dashboard: React.FC = () => {
         </div>
 
         {/* Gráfico Dinâmico SVG (Estilo Area Chart) */}
-        <div className="w-full mt-6 h-28 relative">
-          <svg className="w-full h-full overflow-visible" viewBox={`0 0 ${width} ${height}`} preserveAspectRatio="none">
+        <div ref={chartContainerRef} className="w-full mt-6 h-28 relative">
+          <svg className="w-full h-full overflow-visible" viewBox={`0 0 ${chartWidth} ${height}`}>
             <defs>
               <linearGradient id="chartGradient" x1="0" y1="0" x2="0" y2="1">
                 <stop offset="0%" stopColor="#bc000a" stopOpacity="0.25" />
@@ -136,10 +154,10 @@ export const Dashboard: React.FC = () => {
               </linearGradient>
             </defs>
             {/* Linhas de Grade Horizontais */}
-            <line x1="0" y1="30" x2={width} y2="30" stroke="rgba(0,0,0,0.03)" strokeDasharray="3 3" />
-            <line x1="0" y1="60" x2={width} y2="60" stroke="rgba(0,0,0,0.03)" strokeDasharray="3 3" />
-            <line x1="0" y1="90" x2={width} y2="90" stroke="rgba(0,0,0,0.03)" strokeDasharray="3 3" />
-            <line x1="0" y1="120" x2={width} y2="120" stroke="rgba(0,0,0,0.06)" />
+            <line x1="0" y1="30" x2={chartWidth} y2="30" stroke="rgba(0,0,0,0.03)" strokeDasharray="3 3" />
+            <line x1="0" y1="60" x2={chartWidth} y2="60" stroke="rgba(0,0,0,0.03)" strokeDasharray="3 3" />
+            <line x1="0" y1="90" x2={chartWidth} y2="90" stroke="rgba(0,0,0,0.03)" strokeDasharray="3 3" />
+            <line x1="0" y1="120" x2={chartWidth} y2="120" stroke="rgba(0,0,0,0.06)" />
             
             {/* Gráfico de Área */}
             {areaPath && <path d={areaPath} fill="url(#chartGradient)" />}
