@@ -20,7 +20,8 @@ const LOCAL_FILE_MAPPINGS: Record<string, { id: string; name: string }> = {
 };
 
 export const Scan: React.FC = () => {
-  const { addCardToCollection } = useApp();
+  const { addCardToCollection, currentUser } = useApp();
+
   const [scanMode, setScanMode] = useState<'single' | 'page'>('single');
   const [isProcessing, setIsProcessing] = useState(false);
   const [showFlash, setShowFlash] = useState(false);
@@ -85,8 +86,28 @@ export const Scan: React.FC = () => {
   };
 
   return (
-    <div className="space-y-6 pb-6 animate-fade-in flex flex-col items-center select-none w-full max-w-sm mx-auto relative">
+    <div className="space-y-4 pb-6 animate-fade-in flex flex-col items-center select-none w-full max-w-sm mx-auto relative">
       
+      {/* HEADER BAR (PokéFan + Profile Avatar) */}
+      <div className="w-full flex items-center justify-between px-1 pb-3 border-b border-outline-variant/10">
+        <div className="flex items-center gap-1.5">
+          <div className="w-7 h-7 rounded-full bg-primary flex items-center justify-center shadow-md">
+            <svg viewBox="0 0 24 24" className="w-4 h-4 fill-white animate-spin-slow">
+              <path d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm0 8c-1.1 0-2 .9-2 2s.9 2 2 2 2-.9 2-2-.9-2-2-2zm-8 2c0-4.08 3.05-7.44 7-7.93v3.93c-1.72.45-3 2-3 3.85s1.28 3.4 3 3.85v3.93c-3.95-.49-7-3.85-7-7.93zm10 7.93v-3.93c1.72-.45 3-2 3-3.85s-1.28-3.4-3-3.85V4.07c3.95.49 7 3.85 7 7.93s-3.05 7.44-7 7.93z" />
+            </svg>
+          </div>
+          <span className="text-base font-black tracking-tight text-primary">PokéFan</span>
+        </div>
+        
+        <div className="w-8 h-8 rounded-full border border-outline-variant/20 overflow-hidden bg-neutral-100 shadow-sm">
+          <img 
+            src={currentUser?.avatar || "data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='%239ca3af'><path d='M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm0 4c1.93 0 3.5 1.57 3.5 3.5S13.93 13 12 13s-3.5-1.57-3.5-3.5S10.07 6 12 6zm0 14c-2.03 0-4.43-.82-6.14-2.88C7.55 15.8 9.68 15 12 15s4.45.8 6.14 2.12C16.43 19.18 14.03 20 12 20z'/></svg>"} 
+            alt="Profile" 
+            className="w-full h-full object-cover"
+          />
+        </div>
+      </div>
+
       {/* SUCCESS TOAST MESSAGE */}
       {toastMessage && (
         <div className="fixed top-4 left-1/2 -translate-x-1/2 z-50 bg-emerald-600 text-white px-5 py-3 rounded-2xl shadow-xl flex items-center gap-2 border border-emerald-500/20 font-bold text-xs animate-fade-in text-center max-w-xs">
@@ -96,18 +117,38 @@ export const Scan: React.FC = () => {
       )}
 
       {/* TÍTULO E FEEDBACK */}
-      <div className="text-center">
+      <div className="text-center pt-1">
         <h2 className="text-xl font-extrabold text-on-surface tracking-tight">Escanear Carta</h2>
         <p className="text-xs text-on-surface-variant font-medium mt-0.5">Mire na carta ou selecione um arquivo local</p>
       </div>
 
-      {/* 1. FAUX CAMERA FEED NO TAMANHO DA PROPORÇÃO DA CARTA */}
-      <div className="relative w-[260px] aspect-[63/88] bg-black rounded-3xl overflow-hidden shadow-lg border-4 border-white flex flex-col justify-center items-center">
+      {/* Seletor de Modo */}
+      <div className="bg-surface-container-low p-0.5 rounded-full shadow-inner flex items-center border border-outline-variant/10">
+        <button 
+          onClick={() => setScanMode('single')}
+          className={`px-5 py-1.5 rounded-full text-[10px] font-black transition-all uppercase ${
+            scanMode === 'single' ? 'bg-primary text-white shadow-md scale-105' : 'text-on-surface-variant hover:text-primary'
+          }`}
+        >
+          Carta Única
+        </button>
+        <button 
+          onClick={() => setScanMode('page')}
+          className={`px-5 py-1.5 rounded-full text-[10px] font-black transition-all uppercase ${
+            scanMode === 'page' ? 'bg-primary text-white shadow-md scale-105' : 'text-on-surface-variant hover:text-primary'
+          }`}
+        >
+          Página de Pasta
+        </button>
+      </div>
+
+      {/* 1. GRANDE VISOR DE CAMERA FEED ESTILO POKÉDEX */}
+      <div className="relative w-full max-w-[340px] aspect-[63/88] bg-black rounded-[36px] overflow-hidden shadow-2xl border-[5px] border-white flex flex-col justify-center items-center">
         
         {/* FAUX CAMERA BACKGROUND */}
         <div className="absolute inset-0 z-0 bg-neutral-900 flex items-center justify-center overflow-hidden">
           <div className="w-full h-full relative opacity-60 flex items-center justify-center">
-            <div className="absolute inset-0 bg-gradient-to-t from-black/85 via-transparent to-black/85 z-10" />
+            <div className="absolute inset-0 bg-gradient-to-t from-black/95 via-transparent to-black/95 z-10" />
             <img 
               src="https://images.unsplash.com/photo-1542751371-adc38448a05e?w=800&auto=format&fit=crop&q=60" 
               alt="Camera Background" 
@@ -118,19 +159,70 @@ export const Scan: React.FC = () => {
 
         {/* DYNAMIC SCANNING RETICLE OVERLAY */}
         {!showSheet && !isProcessing && (
-          <div className="absolute inset-0 z-10 flex flex-col items-center justify-center pointer-events-none p-3">
+          <div className="absolute inset-0 z-10 flex flex-col items-center justify-center pointer-events-none">
             {/* Linha Vermelha Laser de Varredura */}
-            <div className="absolute left-0 w-full h-0.5 bg-primary shadow-[0_0_10px_3px_rgba(234,0,15,0.7)] animate-scan z-20"></div>
+            <div className="absolute left-0 w-full h-0.5 bg-red-600 shadow-[0_0_12px_4px_rgba(234,0,15,0.8)] animate-scan z-20"></div>
             
-            {/* Cantoneiras de Mira (Brackets) */}
-            <div className="absolute top-3 left-3 w-6 h-6 border-t-4 border-l-4 border-primary rounded-tl-lg bracket-pulse"></div>
-            <div className="absolute top-3 right-3 w-6 h-6 border-t-4 border-r-4 border-primary rounded-tr-lg bracket-pulse" style={{ animationDelay: '0.2s' }}></div>
-            <div className="absolute bottom-3 left-3 w-6 h-6 border-b-4 border-l-4 border-primary rounded-bl-lg bracket-pulse" style={{ animationDelay: '0.6s' }}></div>
-            <div className="absolute bottom-3 right-3 w-6 h-6 border-b-4 border-r-4 border-primary rounded-br-lg bracket-pulse" style={{ animationDelay: '0.4s' }}></div>
+            {/* Cantoneiras de Mira Vermelhas (Brackets) */}
+            <div className="absolute top-6 left-6 w-8 h-8 border-t-[5px] border-l-[5px] border-red-600 rounded-tl-xl bracket-pulse"></div>
+            <div className="absolute top-6 right-6 w-8 h-8 border-t-[5px] border-r-[5px] border-red-600 rounded-tr-xl bracket-pulse" style={{ animationDelay: '0.2s' }}></div>
+            <div className="absolute bottom-28 left-6 w-8 h-8 border-b-[5px] border-l-[5px] border-red-600 rounded-bl-xl bracket-pulse" style={{ animationDelay: '0.6s' }}></div>
+            <div className="absolute bottom-28 right-6 w-8 h-8 border-b-[5px] border-r-[5px] border-red-600 rounded-br-xl bracket-pulse" style={{ animationDelay: '0.4s' }}></div>
             
-            {/* Ícone de auxílio visual */}
-            <div className="opacity-20">
-              <ScanIcon className="text-primary w-10 h-10" />
+            {/* Retícula de Mira Central */}
+            <div className="absolute w-12 h-12 border-2 border-dashed border-red-600/40 rounded-2xl flex items-center justify-center">
+              <div className="w-1.5 h-1.5 bg-red-600/60 rounded-full"></div>
+            </div>
+          </div>
+        )}
+
+        {/* CONTROLLER ACTIONS OVERLAY INSIDE THE VIEWPORT */}
+        {!showSheet && !isProcessing && (
+          <div className="absolute bottom-6 inset-x-0 z-20 flex flex-col items-center gap-3">
+            
+            {/* Botões de Ação de Captura */}
+            <div className="flex items-center justify-center gap-8 w-full relative px-6">
+              
+              {/* Botão de Disparo Principal (Câmera) */}
+              <button 
+                onClick={handleRandomScan}
+                className="w-16 h-16 rounded-full border-[4px] border-white bg-red-600 shadow-xl flex items-center justify-center active:scale-90 transition-all hover:bg-red-700 text-white"
+              >
+                <Camera size={24} />
+              </button>
+
+              {/* Seletor de Cartas Locais (Upload de Arquivo) */}
+              <div className="absolute right-8 top-1/2 -translate-y-1/2 flex flex-col items-center">
+                <div className="relative">
+                  <select
+                    onChange={(e) => {
+                      if (e.target.value) handleFileScan(e.target.value);
+                    }}
+                    className="absolute inset-0 opacity-0 cursor-pointer w-10 h-10 rounded-full z-30"
+                    defaultValue=""
+                  >
+                    <option value="" disabled>Escolha</option>
+                    {Object.keys(LOCAL_FILE_MAPPINGS).map((fileName) => (
+                      <option key={fileName} value={fileName}>
+                        {fileName.replace('_EN_', ' #')}
+                      </option>
+                    ))}
+                  </select>
+                  <button 
+                    className="w-10 h-10 rounded-full bg-white flex items-center justify-center text-neutral-600 shadow-md active:scale-95 transition-all"
+                  >
+                    <Upload size={18} />
+                  </button>
+                </div>
+              </div>
+
+            </div>
+
+            {/* Texto de Instrução */}
+            <div className="bg-black/60 px-4 py-1.5 rounded-full border border-white/5 shadow-inner">
+              <span className="text-[8px] font-black text-white/90 uppercase tracking-wider">
+                Capture uma imagem ou carregue um arquivo da pasta local
+              </span>
             </div>
           </div>
         )}
@@ -151,77 +243,6 @@ export const Scan: React.FC = () => {
           <div className="absolute inset-0 bg-white z-30 opacity-100 transition-opacity duration-150 pointer-events-none"></div>
         )}
       </div>
-
-      {/* 2. CONTROLS AREA (SUBIDOS E SEM INVADIR O MENU) */}
-      {!showSheet && !isProcessing && (
-        <div className="flex flex-col items-center gap-3 w-full px-4 pt-1">
-          {/* Seletor de Modo */}
-          <div className="bg-surface-container-low p-0.5 rounded-full shadow-inner flex items-center border border-outline-variant/10">
-            <button 
-              onClick={() => setScanMode('single')}
-              className={`px-4 py-1.5 rounded-full text-[10px] font-black transition-all uppercase ${
-                scanMode === 'single' ? 'bg-primary text-white shadow-sm' : 'text-on-surface-variant hover:text-primary'
-              }`}
-            >
-              Carta Única
-            </button>
-            <button 
-              onClick={() => setScanMode('page')}
-              className={`px-4 py-1.5 rounded-full text-[10px] font-black transition-all uppercase ${
-                scanMode === 'page' ? 'bg-primary text-white shadow-sm' : 'text-on-surface-variant hover:text-primary'
-              }`}
-            >
-              Página de Pasta
-            </button>
-          </div>
-
-          <p className="text-[10px] font-bold text-on-surface-variant tracking-wide text-center mt-1">
-            Capture uma imagem ou carregue um arquivo da pasta local
-          </p>
-
-          {/* Botões de Ação de Captura */}
-          <div className="flex items-center gap-6 mt-1">
-            
-            {/* Seletor de Cartas Locais (Arquivo) */}
-            <div className="flex flex-col items-center">
-              <div className="relative">
-                <select
-                  onChange={(e) => {
-                    if (e.target.value) handleFileScan(e.target.value);
-                  }}
-                  className="absolute inset-0 opacity-0 cursor-pointer w-12 h-12 rounded-full"
-                  defaultValue=""
-                >
-                  <option value="" disabled>Escolha</option>
-                  {Object.keys(LOCAL_FILE_MAPPINGS).map((fileName) => (
-                    <option key={fileName} value={fileName}>
-                      {fileName.replace('_EN_', ' #')}
-                    </option>
-                  ))}
-                </select>
-                <button 
-                  className="w-12 h-12 rounded-full bg-surface-container-low hover:bg-surface-container-high border border-outline-variant/30 flex items-center justify-center text-on-surface shadow-sm active:scale-95 transition-all"
-                >
-                  <Upload size={18} />
-                </button>
-              </div>
-              <span className="text-[8px] font-black text-on-surface-variant mt-1.5 uppercase tracking-wider">Arquivo</span>
-            </div>
-
-            {/* Botão de Disparo */}
-            <div className="flex flex-col items-center">
-              <button 
-                onClick={handleRandomScan}
-                className="w-16 h-16 rounded-full border-4 border-white bg-primary shadow-lg flex items-center justify-center active:scale-90 transition-all hover:bg-primary-container group"
-              >
-                <Camera size={22} className="text-white" />
-              </button>
-              <span className="text-[8px] font-black text-on-surface-variant mt-1.5 uppercase tracking-wider">Capturar</span>
-            </div>
-
-          </div>
-        </div>
-      )}
 
       {/* 3. SLIDABLE CONFIRMATION BOTTOM SHEET (FIXED OVERLAY DRAWER - IMMUNE TO HEIGHT GLITCHES) */}
       {showSheet && detectedCard && (
