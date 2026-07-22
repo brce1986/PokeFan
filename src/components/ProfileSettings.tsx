@@ -22,6 +22,7 @@ export const ProfileSettings: React.FC = () => {
   const [avatar, setAvatar] = useState(currentUser?.avatar || DEFAULT_AVATARS[0]);
   const [toastMessage, setToastMessage] = useState<string | null>(null);
   const [isEditingProfile, setIsEditingProfile] = useState(false);
+  const [apifyToken, setApifyToken] = useState(localStorage.getItem('pokefan_apify_token') || '');
 
   // Estados de Crop e Redimensionamento
   const [cropSrc, setCropSrc] = useState<string | null>(null);
@@ -280,8 +281,25 @@ export const ProfileSettings: React.FC = () => {
               type="text" 
               value={currentUser?.email || 'alex.trainer@pokevault.app'} 
               disabled 
-              className="w-full bg-surface-container-low border-none rounded-xl px-4 py-3 text-xs font-semibold text-on-surface-variant/80"
+              className="w-full bg-surface-container-low border border-none rounded-xl px-4 py-3 text-xs font-semibold text-on-surface-variant/80"
             />
+          </div>
+          <div className="pt-2">
+            <label className="block text-[9px] font-bold text-on-surface-variant uppercase tracking-wider mb-1">Token de API Apify (Scraper LigaPokémon)</label>
+            <input 
+              type="password" 
+              placeholder="apify_api_xxxxxxxxxxxxxxxxxxxxxx"
+              value={apifyToken} 
+              onChange={(e) => {
+                const val = e.target.value.trim();
+                setApifyToken(val);
+                localStorage.setItem('pokefan_apify_token', val);
+              }}
+              className="w-full bg-surface-container-low border border-outline-variant/15 rounded-xl px-4 py-3 text-xs font-semibold text-on-surface focus:outline-none focus:border-primary"
+            />
+            <p className="text-[8px] text-on-surface-variant font-bold uppercase tracking-wider mt-1.5 leading-snug">
+              Opcional. Permite consultar preços de mercado reais da LigaPokémon via Apify Actor.
+            </p>
           </div>
         </div>
       </section>

@@ -3,6 +3,7 @@ import { useApp } from '../context/AppContext';
 import { pokemonApi, type TCGCard } from '../services/pokemonApi';
 import { ArrowLeft, Search, Share2, Plus, Minus, Check, TrendingUp, Info } from 'lucide-react';
 import { sanitizeInput, isValidCardId } from '../utils/security';
+import { ligaPokemonApi, type LigaPokemonPrice } from '../services/ligaPokemonApi';
 
 // Helpers para gradients baseados nos tipos do Pokémon
 const TYPE_GRADIENTS: Record<string, string> = {
@@ -51,6 +52,47 @@ export const SearchDetails: React.FC = () => {
   const [variant, setVariant] = useState<'normal' | 'holo' | 'reverse'>('normal');
   const [quantity, setQuantity] = useState(1);
   const [toastMessage, setToastMessage] = useState<string | null>(null);
+
+  // LigaPokemon pricing states
+  const [ligaPrice, setLigaPrice] = useState<LigaPokemonPrice | null>(null);
+  const [loadingLiga, setLoadingLiga] = useState(false);
+
+  // Carregar preço da LigaPokémon quando cardInfo carregar
+  useEffect(() => {
+    if (!cardInfo) {
+      setLigaPrice(null);
+      return;
+    }
+    const loadLigaPrice = async () => {
+      setLoadingLiga(true);
+      try {
+        const p = await ligaPokemonApi.getCardPrice(cardInfo);
+        setLigaPrice(p);
+      } catch (err) {
+        console.error("Erro ao obter preço Liga:", err);
+      } finally {
+        setLoadingLiga(false);
+      }
+    };
+    loadLigaPrice();
+  }, [cardInfo]);
+
+  const handleRefreshLigaPrice = async () => {
+    if (!cardInfo) return;
+    setLoadingLiga(true);
+    try {
+      const p = await ligaPokemonApi.getCardPrice(cardInfo, true);
+      setLigaPrice(p);
+      setToastMessage('Preço da LigaPokémon atualizado!');
+      setTimeout(() => setToastMessage(null), 3000);
+    } catch (err) {
+      console.error(err);
+      setToastMessage('Erro ao atualizar preço na Liga.');
+      setTimeout(() => setToastMessage(null), 3000);
+    } finally {
+      setLoadingLiga(false);
+    }
+  };
 
   // Carregar lista inicial (ex: Charizard, Pikachu, etc.)
   useEffect(() => {
@@ -304,7 +346,7 @@ export const SearchDetails: React.FC = () => {
               <div className="bg-surface-container-lowest rounded-3xl p-5 shadow-ambient-lvl1 border border-outline-variant/15 space-y-4">
                 <div className="flex justify-between items-start">
                   <div>
-                    <span className="text-[10px] font-bold text-on-surface-variant uppercase tracking-wider">Preço de Mercado TCG</span>
+                    <span className="text-[10px] font-bold text-on-surface-variant uppercase tracking-wider">Preço de Mercado TCG (USD)</span>
                     <div className="text-2xl font-black text-primary mt-1">
                       {formatPrice(
                         cardInfo.tcgplayer?.prices?.holofoil?.market || 
@@ -321,6 +363,48 @@ export const SearchDetails: React.FC = () => {
                   >
                     <Share2 size={18} />
                   </button>
+                </div>
+
+                {/* Preço de Mercado LigaPokémon */}
+                <div className="border-t border-outline-variant/10 pt-4 mt-2 space-y-2">
+                  <div className="flex justify-between items-center">
+                    <div>
+                      <span className="text-[10px] font-bold text-on-surface-variant uppercase tracking-wider block">Preço LigaPokémon (BRL)</span>
+                      {loadingLiga ? (
+                        <div className="text-xs font-bold text-on-surface-variant animate-pulse mt-1">Consultando na Liga...</div>
+                      ) : (
+                        <div className="text-xl font-black text-tertiary mt-0.5">
+                          {ligaPrice ? `R$ ${ligaPrice.priceAvg.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}` : 'N/A'}
+                        </div>
+                      )}
+                    </div>
+                    
+                    <button
+                      onClick={handleRefreshLigaPrice}
+                      disabled={loadingLiga}
+                      type="button"
+                      className="bg-surface-container-low hover:bg-surface-container-high border border-outline-variant/10 text-tertiary px-2.5 py-1.5 rounded-xl text-[10px] font-extrabold flex items-center gap-1 active:scale-95 transition-all shadow-xs disabled:opacity-50"
+                      title="Forçar atualização via Apify Scraper"
+                    >
+                      <span>🔄 Atualizar</span>
+                    </button>
+                  </div>
+
+                  {ligaPrice && !loadingLiga && (
+                    <div className="flex justify-between items-center bg-surface-container-low/30 rounded-xl p-2.5 text-[9px] font-extrabold text-on-surface-variant tracking-wide">
+                      <span>Mín: R$ {ligaPrice.priceMin.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}</span>
+                      <span>Máx: R$ {ligaPrice.priceMax.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}</span>
+                    </div>
+                  )}
+
+                  {ligaPrice && (
+                    <div className="text-[8px] font-bold text-on-surface-variant/80 flex items-center gap-1 leading-snug">
+                      <span className={ligaPrice.isReal ? "text-emerald-600" : "text-amber-500"}>
+                        {ligaPrice.isReal ? "● Real (Apify Scraper)" : "● Estimado (Fator de Câmbio)"}
+                      </span>
+                      <span>- Atualizado em {new Date(ligaPrice.lastUpdated).toLocaleDateString('pt-BR')}</span>
+                    </div>
+                  )}
                 </div>
 
                 {/* SVG Histórico de Preços Sparkline */}

@@ -33,6 +33,7 @@ export interface TCGCard {
       reverseHolofoil?: { low: number; mid: number; high: number; market: number };
     };
   };
+  set?: TCGSet;
 }
 
 export interface TCGSet {
