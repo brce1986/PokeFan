@@ -12,6 +12,12 @@ export interface CollectionItem {
   cardDetails: TCGCard;
 }
 
+export interface WishlistItem {
+  cardId: string;
+  cardDetails: TCGCard;
+  addedAt: string;
+}
+
 export interface User {
   username: string;
   email: string;
@@ -31,6 +37,7 @@ interface AppContextType {
   currentUser: User | null;
   usersList: User[];
   collection: CollectionItem[];
+  wishlist: WishlistItem[];
   currency: CurrencyType;
   notifications: NotificationSettings;
   activeTab: 'dashboard' | 'collection' | 'scan' | 'search' | 'profile' | 'trade';
@@ -53,6 +60,9 @@ interface AppContextType {
   exportCollection: () => string;
   importCollection: (jsonStr: string) => boolean;
   resetCollection: () => void;
+  addCardToWishlist: (card: TCGCard) => void;
+  removeCardFromWishlist: (cardId: string) => void;
+  isInWishlist: (cardId: string) => boolean;
   formatPrice: (usdPrice: number) => string;
   getCurrencySymbol: () => string;
 }
@@ -82,6 +92,7 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
   const [currentUser, setCurrentUser] = useState<User | null>(null);
   const [usersList, setUsersList] = useState<User[]>([]);
   const [collection, setCollection] = useState<CollectionItem[]>([]);
+  const [wishlist, setWishlist] = useState<WishlistItem[]>([]);
   const [currency, setCurrencyState] = useState<CurrencyType>('BRL');
   const [notifications, setNotificationsState] = useState<NotificationSettings>({
     priceAlerts: true,
@@ -178,6 +189,11 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
       ];
       setCollection(initialCollection);
       localStorage.setItem('pokefan_collection', JSON.stringify(initialCollection));
+    }
+
+    const storedWishlist = localStorage.getItem('pokefan_wishlist');
+    if (storedWishlist) {
+      setWishlist(JSON.parse(storedWishlist));
     }
   }, []);
 
@@ -494,6 +510,30 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
     saveCollection([]);
   };
 
+  const saveWishlist = (newWishlist: WishlistItem[]) => {
+    setWishlist(newWishlist);
+    localStorage.setItem('pokefan_wishlist', JSON.stringify(newWishlist));
+  };
+
+  const addCardToWishlist = (card: TCGCard) => {
+    if (wishlist.some(item => item.cardId === card.id)) return;
+    const newItem: WishlistItem = {
+      cardId: card.id,
+      cardDetails: card,
+      addedAt: new Date().toISOString()
+    };
+    saveWishlist([newItem, ...wishlist]);
+  };
+
+  const removeCardFromWishlist = (cardId: string) => {
+    const updated = wishlist.filter(item => item.cardId !== cardId);
+    saveWishlist(updated);
+  };
+
+  const isInWishlist = (cardId: string) => {
+    return wishlist.some(item => item.cardId === cardId);
+  };
+
   // Formatação de Valores Monetários
   const formatPrice = (usdPrice: number): string => {
     const converted = usdPrice * CURRENCY_CONVERSION[currency];
@@ -530,6 +570,7 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
         currentUser,
         usersList,
         collection,
+        wishlist,
         currency,
         notifications,
         activeTab,
@@ -543,6 +584,9 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
         addCardToCollection,
         removeCardFromCollection,
         updateCardQty,
+        addCardToWishlist,
+        removeCardFromWishlist,
+        isInWishlist,
         setCurrency,
         setNotifications,
         setActiveTab,

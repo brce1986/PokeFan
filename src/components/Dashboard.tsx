@@ -1,11 +1,12 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { useApp } from '../context/AppContext';
 import { MOCK_SETS } from '../services/pokemonApi';
-import { Scan, Search, TrendingUp, ChevronRight, BookOpen, Sparkles, Award } from 'lucide-react';
+import { Scan, Search, TrendingUp, ChevronRight, BookOpen, Sparkles, Award, Heart } from 'lucide-react';
 
 export const Dashboard: React.FC = () => {
   const { 
     collection, 
+    wishlist,
     formatPrice, 
     setActiveTab, 
     setSelectedCardId, 
@@ -345,6 +346,64 @@ export const Dashboard: React.FC = () => {
                       {formatPrice(marketPrice)}
                     </span>
                     <TrendingUp size={12} className="text-emerald-600" />
+                  </div>
+                </div>
+              );
+            })}
+          </div>
+        )}
+      </section>
+
+      {/* 4. LISTA DE DESEJOS (WISHLIST) */}
+      <section className="bg-surface-container-lowest rounded-3xl p-5 border border-outline-variant/10 shadow-ambient-lvl1 space-y-4">
+        <div className="flex items-center justify-between">
+          <h3 className="text-sm font-extrabold text-on-surface flex items-center gap-2">
+            <Heart size={18} className="text-red-500 fill-red-500" />
+            Lista de Desejos
+          </h3>
+          <span className="text-[9px] bg-red-100 text-red-700 px-2 py-0.5 rounded-full font-black uppercase">
+            {wishlist.length} itens
+          </span>
+        </div>
+
+        {wishlist.length === 0 ? (
+          <div className="text-center py-6 text-on-surface-variant text-xs font-semibold space-y-1">
+            <p>Sua lista de desejos está vazia.</p>
+            <p className="text-[10px] opacity-75 font-normal">Navegue pelas cartas para adicionar seus desejos!</p>
+          </div>
+        ) : (
+          <div className="flex overflow-x-auto pb-2 -mx-4 px-4 gap-4 snap-x scrollbar-hide no-scrollbar">
+            {wishlist.map((item) => {
+              const prices = item.cardDetails.tcgplayer?.prices;
+              const marketPrice = prices?.holofoil?.market || prices?.normal?.market || 10.00;
+
+              return (
+                <div 
+                  key={item.cardId}
+                  onClick={() => {
+                    setSelectedCardId(item.cardId);
+                    setActiveTab('search');
+                  }}
+                  className="min-w-[130px] w-[130px] bg-surface-container-low rounded-2xl p-2 snap-start flex-shrink-0 cursor-pointer hover:border-red-500/20 hover:shadow-md border border-outline-variant/5 transition-all active:scale-[0.98] group"
+                >
+                  <div className="relative w-full aspect-[63/88] rounded-xl bg-surface-container overflow-hidden mb-1.5 shadow-sm">
+                    <img 
+                      className="w-full h-full object-cover transition-transform duration-300 group-hover:scale-105"
+                      src={item.cardDetails.images.small} 
+                      alt={item.cardDetails.name}
+                      loading="lazy"
+                    />
+                    <div className="absolute bottom-1 left-1 bg-black/70 text-white text-[7px] px-1 rounded font-black">
+                      #{item.cardDetails.number}
+                    </div>
+                  </div>
+                  <div className="font-bold text-[11px] text-on-surface truncate pr-1">
+                    {item.cardDetails.name}
+                  </div>
+                  <div className="flex justify-between items-center mt-1 pt-1 border-t border-outline-variant/10">
+                    <span className="font-black text-[10px] text-tertiary">
+                      {formatPrice(marketPrice)}
+                    </span>
                   </div>
                 </div>
               );

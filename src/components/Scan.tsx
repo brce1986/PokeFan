@@ -20,7 +20,7 @@ const LOCAL_FILE_MAPPINGS: Record<string, { id: string; name: string }> = {
 };
 
 export const Scan: React.FC = () => {
-  const { addCardToCollection, currentUser } = useApp();
+  const { addCardToCollection } = useApp();
 
   const [scanMode, setScanMode] = useState<'single' | 'page'>('single');
   const [isProcessing, setIsProcessing] = useState(false);
@@ -88,26 +88,6 @@ export const Scan: React.FC = () => {
   return (
     <div className="space-y-4 pb-6 animate-fade-in flex flex-col items-center select-none w-full max-w-sm mx-auto relative">
       
-      {/* HEADER BAR (PokéFan + Profile Avatar) */}
-      <div className="w-full flex items-center justify-between px-1 pb-3 border-b border-outline-variant/10">
-        <div className="flex items-center gap-1.5">
-          <div className="w-7 h-7 rounded-full bg-primary flex items-center justify-center shadow-md">
-            <svg viewBox="0 0 24 24" className="w-4 h-4 fill-white animate-spin-slow">
-              <path d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm0 8c-1.1 0-2 .9-2 2s.9 2 2 2 2-.9 2-2-.9-2-2-2zm-8 2c0-4.08 3.05-7.44 7-7.93v3.93c-1.72.45-3 2-3 3.85s1.28 3.4 3 3.85v3.93c-3.95-.49-7-3.85-7-7.93zm10 7.93v-3.93c1.72-.45 3-2 3-3.85s-1.28-3.4-3-3.85V4.07c3.95.49 7 3.85 7 7.93s-3.05 7.44-7 7.93z" />
-            </svg>
-          </div>
-          <span className="text-base font-black tracking-tight text-primary">PokéFan</span>
-        </div>
-        
-        <div className="w-8 h-8 rounded-full border border-outline-variant/20 overflow-hidden bg-neutral-100 shadow-sm">
-          <img 
-            src={currentUser?.avatar || "data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='%239ca3af'><path d='M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm0 4c1.93 0 3.5 1.57 3.5 3.5S13.93 13 12 13s-3.5-1.57-3.5-3.5S10.07 6 12 6zm0 14c-2.03 0-4.43-.82-6.14-2.88C7.55 15.8 9.68 15 12 15s4.45.8 6.14 2.12C16.43 19.18 14.03 20 12 20z'/></svg>"} 
-            alt="Profile" 
-            className="w-full h-full object-cover"
-          />
-        </div>
-      </div>
-
       {/* SUCCESS TOAST MESSAGE */}
       {toastMessage && (
         <div className="fixed top-4 left-1/2 -translate-x-1/2 z-50 bg-emerald-600 text-white px-5 py-3 rounded-2xl shadow-xl flex items-center gap-2 border border-emerald-500/20 font-bold text-xs animate-fade-in text-center max-w-xs">
@@ -219,9 +199,9 @@ export const Scan: React.FC = () => {
             </div>
 
             {/* Texto de Instrução */}
-            <div className="bg-black/60 px-4 py-1.5 rounded-full border border-white/5 shadow-inner">
-              <span className="text-[8px] font-black text-white/90 uppercase tracking-wider">
-                Capture uma imagem ou carregue um arquivo da pasta local
+            <div className="bg-black/60 px-4 py-1.5 rounded-full border border-white/5 shadow-inner max-w-[85%] text-center truncate">
+              <span className="text-[7.5px] font-black text-white/95 uppercase tracking-wider block truncate">
+                Capture ou selecione um arquivo local
               </span>
             </div>
           </div>

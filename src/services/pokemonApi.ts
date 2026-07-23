@@ -97,10 +97,33 @@ export const pokemonApi = {
     return result.data;
   },
 
-  // Buscar cartas por nome/termo genérico
   searchCards: async (nameQuery: string, page: number = 1, pageSize: number = 24): Promise<{ data: TCGCard[], totalCount: number }> => {
     try {
-      const q = nameQuery ? `q=name:"*${nameQuery}*"` : '';
+      let q = '';
+      if (nameQuery.includes('/')) {
+        const parts = nameQuery.split('/');
+        const numAndName = parts[0].trim();
+        const total = parts[1] ? parts[1].trim() : '';
+        
+        const numMatch = numAndName.match(/^(.*?)\s*(\d+)$/);
+        if (numMatch) {
+          const namePart = numMatch[1].trim();
+          const numberPart = numMatch[2].trim();
+          q = `q=number:"${numberPart}"`;
+          if (namePart) {
+            q += ` name:"*${namePart}*"`;
+          }
+        } else {
+          q = `q=number:"${numAndName}"`;
+        }
+        
+        if (total) {
+          q += ` set.printedTotal:"${total}"`;
+        }
+      } else {
+        q = nameQuery ? `q=name:"*${nameQuery}*"` : '';
+      }
+
       const result = await fetchFromAPI(`/cards?${q}&page=${page}&pageSize=${pageSize}`);
       return {
         data: result.data,
@@ -108,7 +131,16 @@ export const pokemonApi = {
       };
     } catch (error) {
       console.error("Erro ao buscar cartas da API, usando mock filtrado", error);
-      const filteredMock = MOCK_CARDS.filter(c => c.name.toLowerCase().includes(nameQuery.toLowerCase()));
+      const filteredMock = MOCK_CARDS.filter(c => {
+        if (nameQuery.includes('/')) {
+          const parts = nameQuery.split('/');
+          const numAndName = parts[0].trim();
+          const numMatch = numAndName.match(/^(.*?)\s*(\d+)$/);
+          const numberPart = numMatch ? numMatch[2].trim() : numAndName;
+          return c.number === numberPart;
+        }
+        return c.name.toLowerCase().includes(nameQuery.toLowerCase());
+      });
       return {
         data: filteredMock,
         totalCount: filteredMock.length

@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { useApp } from '../context/AppContext';
 import { pokemonApi, type TCGCard } from '../services/pokemonApi';
-import { ArrowLeft, Search, Share2, Plus, Minus, Check, TrendingUp, Info } from 'lucide-react';
+import { ArrowLeft, Search, Share2, Plus, Minus, Check, TrendingUp, Info, Heart, Trash2, Repeat, ChevronRight } from 'lucide-react';
 import { sanitizeInput, isValidCardId } from '../utils/security';
 import { ligaPokemonApi, type LigaPokemonPrice } from '../services/ligaPokemonApi';
 
@@ -39,7 +39,14 @@ export const SearchDetails: React.FC = () => {
     formatPrice, 
     selectedCardId, 
     setSelectedCardId, 
-    addCardToCollection 
+    addCardToCollection,
+    collection,
+    removeCardFromCollection,
+    updateCardQty,
+    addCardToWishlist,
+    removeCardFromWishlist,
+    isInWishlist,
+    setActiveTab
   } = useApp();
 
   const [searchQuery, setSearchQuery] = useState('');
@@ -52,6 +59,10 @@ export const SearchDetails: React.FC = () => {
   const [variant, setVariant] = useState<'normal' | 'holo' | 'reverse'>('normal');
   const [quantity, setQuantity] = useState(1);
   const [toastMessage, setToastMessage] = useState<string | null>(null);
+
+  // Removel & Wishlist States
+  const [showRemoveModal, setShowRemoveModal] = useState(false);
+  const [removeQty, setRemoveQty] = useState(1);
 
   // LigaPokemon pricing states
   const [ligaPrice, setLigaPrice] = useState<LigaPokemonPrice | null>(null);
@@ -92,6 +103,39 @@ export const SearchDetails: React.FC = () => {
     } finally {
       setLoadingLiga(false);
     }
+  };
+
+  // Wishlist toggle handler
+  const handleToggleWishlist = () => {
+    if (!cardInfo) return;
+    if (isInWishlist(cardInfo.id)) {
+      removeCardFromWishlist(cardInfo.id);
+      setToastMessage(`${cardInfo.name} removida da lista de desejos.`);
+    } else {
+      addCardToWishlist(cardInfo);
+      setToastMessage(`${cardInfo.name} adicionada à lista de desejos!`);
+    }
+    setTimeout(() => setToastMessage(null), 3000);
+  };
+
+  // Remoção de quantidades/cartas da coleção
+  const handleRemoveQuantity = (qtyToRemove: number) => {
+    if (!cardInfo) return;
+    const ownedInstances = collection.filter(item => item.cardId === cardInfo.id);
+    let remaining = qtyToRemove;
+    for (const inst of ownedInstances) {
+      if (remaining <= 0) break;
+      if (inst.quantity <= remaining) {
+        remaining -= inst.quantity;
+        removeCardFromCollection(inst.id);
+      } else {
+        updateCardQty(inst.id, inst.quantity - remaining);
+        remaining = 0;
+      }
+    }
+    setToastMessage(`${qtyToRemove} cópia(s) removida(s) da coleção.`);
+    setTimeout(() => setToastMessage(null), 3000);
+    setShowRemoveModal(false);
   };
 
   // Carregar lista inicial (ex: Charizard, Pikachu, etc.)
@@ -462,23 +506,25 @@ export const SearchDetails: React.FC = () => {
                   </div>
 
                   <div className="flex gap-3 items-end pt-1">
-                    <div className="w-24">
+                    <div className="w-20">
                       <label className="block text-[10px] font-bold text-on-surface-variant uppercase tracking-wider mb-1">
                         Qtd
                       </label>
                       <div className="flex items-center justify-between border border-outline-variant/25 rounded-xl bg-surface-container-low h-9 px-1">
                         <button 
+                          type="button"
                           onClick={() => setQuantity(q => Math.max(1, q - 1))}
-                          className="w-6 h-6 rounded flex items-center justify-center text-on-surface-variant hover:text-primary active:scale-75 transition-all"
+                          className="w-5 h-5 rounded flex items-center justify-center text-on-surface-variant hover:text-primary active:scale-75 transition-all"
                         >
-                          <Minus size={14} />
+                          <Minus size={12} />
                         </button>
                         <span className="font-extrabold text-xs text-on-surface">{quantity}</span>
                         <button 
+                          type="button"
                           onClick={() => setQuantity(q => Math.min(99, q + 1))}
-                          className="w-6 h-6 rounded flex items-center justify-center text-on-surface-variant hover:text-primary active:scale-75 transition-all"
+                          className="w-5 h-5 rounded flex items-center justify-center text-on-surface-variant hover:text-primary active:scale-75 transition-all"
                         >
-                          <Plus size={14} />
+                          <Plus size={12} />
                         </button>
                       </div>
                     </div>
@@ -488,9 +534,65 @@ export const SearchDetails: React.FC = () => {
                       className="flex-grow bg-primary hover:bg-primary-container text-white py-2 rounded-xl text-xs font-bold shadow-sm active:scale-95 transition-all h-9 flex items-center justify-center gap-1"
                     >
                       <Plus size={14} />
-                      Guardar
+                      Adicionar
+                    </button>
+
+                    <button 
+                      onClick={handleToggleWishlist}
+                      type="button"
+                      className={`w-9 h-9 rounded-xl flex items-center justify-center border transition-all active:scale-90 shadow-sm ${
+                        isInWishlist(cardInfo.id)
+                          ? 'bg-red-50 border-red-200 text-red-600'
+                          : 'bg-surface-container-low border-outline-variant/20 text-on-surface-variant hover:text-red-500'
+                      }`}
+                      title={isInWishlist(cardInfo.id) ? "Remover da Lista de Desejos" : "Adicionar à Lista de Desejos"}
+                    >
+                      <Heart size={18} className={isInWishlist(cardInfo.id) ? "fill-red-600" : ""} />
                     </button>
                   </div>
+
+                  {/* Ações adicionais se a carta já estiver na coleção */}
+                  {(() => {
+                    const ownedInstances = collection.filter(item => item.cardId === cardInfo.id);
+                    const totalQty = ownedInstances.reduce((sum, item) => sum + item.quantity, 0);
+                    
+                    if (totalQty > 0) {
+                      return (
+                        <div className="border-t border-outline-variant/10 pt-4 mt-2 space-y-3">
+                          <div 
+                            onClick={() => {
+                              setActiveTab('trade');
+                            }}
+                            className="bg-secondary-container/10 border border-secondary-container/20 hover:bg-secondary-container/20 rounded-3xl p-4 shadow-sm flex items-center justify-between cursor-pointer active:scale-98 transition-all"
+                          >
+                            <div className="flex items-center gap-3">
+                              <div className="w-9 h-9 rounded-2xl bg-secondary/15 flex items-center justify-center text-secondary">
+                                <Repeat size={16} />
+                              </div>
+                              <div>
+                                <h4 className="font-extrabold text-xs text-on-surface">Compartilhar para Troca</h4>
+                                <p className="text-[9px] text-on-surface-variant font-bold uppercase tracking-wider mt-0.5">Disponibilizar na pasta de trocas</p>
+                              </div>
+                            </div>
+                            <ChevronRight size={16} className="text-secondary/60" />
+                          </div>
+
+                          <button
+                            onClick={() => {
+                              setRemoveQty(1);
+                              setShowRemoveModal(true);
+                            }}
+                            type="button"
+                            className="w-full border border-red-500/20 hover:bg-red-500/5 text-red-600 font-bold py-2.5 rounded-2xl text-xs active:scale-95 transition-all flex items-center justify-center gap-1.5"
+                          >
+                            <Trash2 size={14} />
+                            Remover Carta
+                          </button>
+                        </div>
+                      );
+                    }
+                    return null;
+                  })()}
                 </div>
               </div>
             </div>
@@ -585,6 +687,71 @@ export const SearchDetails: React.FC = () => {
           )}
         </>
       )}
+
+      {/* MODAL DE REMOÇÃO DE CARTAS */}
+      {showRemoveModal && cardInfo && (() => {
+        const ownedInstances = collection.filter(item => item.cardId === cardInfo.id);
+        const totalQty = ownedInstances.reduce((sum, item) => sum + item.quantity, 0);
+
+        return (
+          <div className="fixed inset-0 z-50 bg-black/60 flex items-center justify-center p-4 animate-fade-in">
+            <div className="bg-surface-container-lowest rounded-3xl p-6 shadow-2xl max-w-sm w-full border border-outline-variant/15 space-y-4 animate-scale-up">
+              <div className="text-center space-y-2">
+                <div className="w-12 h-12 rounded-full bg-red-100 text-red-600 flex items-center justify-center mx-auto">
+                  <Trash2 size={24} />
+                </div>
+                <h3 className="font-extrabold text-base text-on-surface">
+                  {totalQty > 1 ? "Remover Cópias" : "Remover Carta"}
+                </h3>
+                <p className="text-xs text-on-surface-variant font-medium">
+                  {totalQty > 1 
+                    ? `Você possui ${totalQty} cópias desta carta na coleção. Quantas deseja remover?` 
+                    : "Tem certeza que deseja remover esta carta da sua coleção?"}
+                </p>
+              </div>
+
+              {totalQty > 1 && (
+                <div className="flex items-center justify-center gap-4 py-2">
+                  <button 
+                    onClick={() => setRemoveQty(q => Math.max(1, q - 1))}
+                    className="w-8 h-8 rounded-xl border border-outline-variant/20 flex items-center justify-center text-on-surface hover:bg-surface-container-low"
+                  >
+                    <Minus size={14} />
+                  </button>
+                  <span className="font-black text-lg text-on-surface w-8 text-center">{removeQty}</span>
+                  <button 
+                    onClick={() => setRemoveQty(q => Math.min(totalQty, q + 1))}
+                    className="w-8 h-8 rounded-xl border border-outline-variant/20 flex items-center justify-center text-on-surface hover:bg-surface-container-low"
+                  >
+                    <Plus size={14} />
+                  </button>
+                </div>
+              )}
+
+              <div className="flex gap-3 pt-2">
+                <button
+                  onClick={() => setShowRemoveModal(false)}
+                  className="flex-grow bg-surface-container-high hover:bg-surface-container-highest text-on-surface font-bold py-2.5 rounded-xl text-xs transition-colors"
+                >
+                  Cancelar
+                </button>
+                <button
+                  onClick={() => {
+                    if (totalQty > 1) {
+                      handleRemoveQuantity(removeQty);
+                    } else {
+                      handleRemoveQuantity(1);
+                    }
+                  }}
+                  className="flex-grow bg-red-600 hover:bg-red-700 text-white font-bold py-2.5 rounded-xl text-xs shadow-md transition-colors"
+                >
+                  Confirmar
+                </button>
+              </div>
+            </div>
+          </div>
+        );
+      })()}
 
     </div>
   );

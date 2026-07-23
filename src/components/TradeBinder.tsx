@@ -1,14 +1,24 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { useApp, type CollectionItem } from '../context/AppContext';
 import { Share2, Copy, Send, Check, X, RefreshCw, QrCode } from 'lucide-react';
 
 export const TradeBinder: React.FC = () => {
-  const { collection, formatPrice, setActiveTab } = useApp();
+  const { collection, formatPrice, setActiveTab, selectedCardId } = useApp();
   const [selectedTradeItem, setSelectedTradeItem] = useState<CollectionItem | null>(null);
   const [toastMessage, setToastMessage] = useState<string | null>(null);
 
-  // Filtrar cartas duplicadas (Qtd > 1) que podem ser trocadas
-  const duplicates = collection.filter(item => item.quantity > 1);
+  // Selecionar automaticamente a carta ativa vinda do fluxo de detalhes
+  useEffect(() => {
+    if (selectedCardId) {
+      const ownedItem = collection.find(item => item.cardDetails.id === selectedCardId);
+      if (ownedItem) {
+        setSelectedTradeItem(ownedItem);
+      }
+    }
+  }, [selectedCardId, collection]);
+
+  // Toda a coleção está disponível para trocas
+  const tradeItems = collection;
 
   const handleShareSocial = (platform: string) => {
     if (!selectedTradeItem) return;
@@ -48,18 +58,18 @@ export const TradeBinder: React.FC = () => {
       {/* Cabeçalho */}
       <div className="flex flex-col">
         <h2 className="text-2xl font-extrabold text-on-surface tracking-tight">Pasta de Trocas</h2>
-        <p className="text-xs text-on-surface-variant font-medium mt-0.5">Cartas repetidas disponíveis para negociação</p>
+        <p className="text-xs text-on-surface-variant font-medium mt-0.5">Cartas disponíveis para negociação</p>
       </div>
 
-      {duplicates.length === 0 ? (
+      {tradeItems.length === 0 ? (
         <div className="bg-surface-container-lowest rounded-3xl p-8 shadow-ambient-lvl1 border border-outline-variant/10 text-center space-y-4">
           <div className="w-16 h-16 rounded-full bg-secondary-container/20 flex items-center justify-center mx-auto border border-secondary-container/20">
             <RefreshCw size={28} className="text-secondary-container" />
           </div>
           <div className="space-y-1">
-            <h3 className="font-extrabold text-sm text-on-surface">Nenhuma Duplicata Encontrada</h3>
+            <h3 className="font-extrabold text-sm text-on-surface">Nenhuma Carta Encontrada</h3>
             <p className="text-xs text-on-surface-variant max-w-xs mx-auto">
-              Sua pasta de trocas mostra automaticamente as cartas com quantidade maior que 1.
+              Sua pasta de trocas mostra automaticamente as cartas que você tem na coleção.
             </p>
           </div>
           <button
@@ -71,10 +81,9 @@ export const TradeBinder: React.FC = () => {
         </div>
       ) : (
         <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 gap-4">
-          {duplicates.map(item => {
+          {tradeItems.map(item => {
             const price = item.cardDetails.tcgplayer?.prices?.holofoil?.market || item.cardDetails.tcgplayer?.prices?.normal?.market || 10;
-            // Número de duplicatas disponíveis para troca (Qtd total - 1 que fica na coleção principal)
-            const tradeQty = item.quantity - 1;
+            const tradeQty = item.quantity;
 
             return (
               <div

@@ -12,7 +12,6 @@ import {
   Grid2X2, 
   Scan as ScanIcon, 
   Search, 
-  Repeat, 
   User 
 } from 'lucide-react';
 
@@ -66,8 +65,7 @@ const AppContent: React.FC = () => {
               { id: 'dashboard', label: 'Painel Inicial', icon: Home },
               { id: 'collection', label: 'Minha Coleção', icon: Grid2X2 },
               { id: 'scan', label: 'Escanear Carta', icon: ScanIcon },
-              { id: 'search', label: 'Buscar no Banco', icon: Search },
-              { id: 'trade', label: 'Pasta de Trocas', icon: Repeat },
+              { id: 'search', label: 'Cartas', icon: Search },
               { id: 'profile', label: 'Treinador / Ajustes', icon: User },
             ].map(tab => {
               const Icon = tab.icon;
@@ -141,7 +139,7 @@ const AppContent: React.FC = () => {
           { id: 'dashboard', label: 'Painel', icon: Home },
           { id: 'collection', label: 'Coleção', icon: Grid2X2 },
           { id: 'scan', label: 'Escanear', icon: ScanIcon, isFAB: true },
-          { id: 'trade', label: 'Trocas', icon: Repeat },
+          { id: 'search', label: 'Cartas', icon: Search },
           { id: 'profile', label: 'Perfil', icon: User },
         ].map(tab => {
           const Icon = tab.icon;
