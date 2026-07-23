@@ -16,9 +16,12 @@ import {
 } from 'lucide-react';
 
 const AppContent: React.FC = () => {
-  const { currentUser, activeTab, setActiveTab } = useApp();
+  const { currentUser, awaitingPasswordReset, activeTab, setActiveTab } = useApp();
 
-  if (!currentUser) {
+  // O link de recuperação cria uma sessão válida, então currentUser existe.
+  // Sem checar awaitingPasswordReset o app entraria direto no painel e a tela
+  // de trocar a senha nunca apareceria.
+  if (!currentUser || awaitingPasswordReset) {
     return <Onboarding />;
   }
 

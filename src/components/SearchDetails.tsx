@@ -1,9 +1,10 @@
 import React, { useState, useEffect } from 'react';
 import { useApp } from '../context/AppContext';
 import { pokemonApi, type TCGCard } from '../services/pokemonApi';
-import { ArrowLeft, Search, Share2, Plus, Minus, Check, TrendingUp, Info, Heart, Trash2, Repeat, ChevronRight } from 'lucide-react';
+import { ArrowLeft, Search, Share2, Plus, Minus, Check, Info, Heart, Trash2, Repeat, ChevronRight } from 'lucide-react';
 import { sanitizeInput, isValidCardId } from '../utils/security';
 import { ligaPokemonApi, type LigaPokemonPrice } from '../services/ligaPokemonApi';
+import { precoUSD, SEM_PRECO } from '../utils/pricing';
 
 // Helpers para gradients baseados nos tipos do Pokémon
 const TYPE_GRADIENTS: Record<string, string> = {
@@ -35,9 +36,10 @@ const TYPE_TRANSLATIONS: Record<string, string> = {
 };
 
 export const SearchDetails: React.FC = () => {
-  const { 
-    formatPrice, 
-    selectedCardId, 
+  const {
+    formatPrice,
+    currency,
+    selectedCardId,
     setSelectedCardId, 
     addCardToCollection,
     collection,
@@ -52,6 +54,9 @@ export const SearchDetails: React.FC = () => {
   const [searchQuery, setSearchQuery] = useState('');
   const [searchResults, setSearchResults] = useState<TCGCard[]>([]);
   const [loadingSearch, setLoadingSearch] = useState(false);
+  // Distingue "ainda não buscou" de "buscou e não achou nada" no estado vazio
+  const [hasSearched, setHasSearched] = useState(false);
+  const [lastSearchTerm, setLastSearchTerm] = useState('');
 
   // Card details states
   const [cardInfo, setCardInfo] = useState<TCGCard | null>(null);
@@ -183,6 +188,7 @@ export const SearchDetails: React.FC = () => {
       return;
     }
     setLoadingSearch(true);
+    setLastSearchTerm(cleanQuery);
     try {
       const result = await pokemonApi.searchCards(cleanQuery);
       setSearchResults(result.data || []);
@@ -190,6 +196,7 @@ export const SearchDetails: React.FC = () => {
       console.error(err);
     } finally {
       setLoadingSearch(false);
+      setHasSearched(true);
     }
   };
 
@@ -204,11 +211,10 @@ export const SearchDetails: React.FC = () => {
 
   const handleShare = () => {
     if (!cardInfo) return;
-    
+
+    const precoParaCompartilhar = precoUSD(cardInfo);
     const shareText = `Olha essa carta Pokémon que achei no PokéFan!\n${cardInfo.name} (${cardInfo.rarity || 'Comum'})\nPreço de mercado: ${
-      cardInfo.tcgplayer?.prices?.holofoil?.market || cardInfo.tcgplayer?.prices?.normal?.market
-        ? formatPrice(cardInfo.tcgplayer.prices.holofoil?.market || cardInfo.tcgplayer.prices.normal?.market || 0)
-        : formatPrice(10)
+      precoParaCompartilhar !== null ? formatPrice(precoParaCompartilhar) : SEM_PRECO
     }`;
 
     if (navigator.share) {
@@ -236,6 +242,9 @@ export const SearchDetails: React.FC = () => {
     if (!types || types.length === 0) return 'Incolor';
     return TYPE_TRANSLATIONS[types[0]] || types[0];
   };
+
+  // Preço de mercado TCG do card em foco. null quando não há preço publicado.
+  const precoMercadoUSD = cardInfo ? precoUSD(cardInfo) : null;
 
   return (
     <div className="space-y-6 pb-6 animate-fade-in select-none">
@@ -390,13 +399,9 @@ export const SearchDetails: React.FC = () => {
               <div className="bg-surface-container-lowest rounded-3xl p-5 shadow-ambient-lvl1 border border-outline-variant/15 space-y-4">
                 <div className="flex justify-between items-start">
                   <div>
-                    <span className="text-[10px] font-bold text-on-surface-variant uppercase tracking-wider">Preço de Mercado TCG (USD)</span>
+                    <span className="text-[10px] font-bold text-on-surface-variant uppercase tracking-wider">Preço de Mercado TCG ({currency})</span>
                     <div className="text-2xl font-black text-primary mt-1">
-                      {formatPrice(
-                        cardInfo.tcgplayer?.prices?.holofoil?.market || 
-                        cardInfo.tcgplayer?.prices?.normal?.market || 
-                        10.00
-                      )}
+                      {precoMercadoUSD !== null ? formatPrice(precoMercadoUSD) : SEM_PRECO}
                     </div>
                   </div>
                   
@@ -449,26 +454,6 @@ export const SearchDetails: React.FC = () => {
                       <span>- Atualizado em {new Date(ligaPrice.lastUpdated).toLocaleDateString('pt-BR')}</span>
                     </div>
                   )}
-                </div>
-
-                {/* SVG Histórico de Preços Sparkline */}
-                <div className="bg-surface-container-low/30 border border-outline-variant/10 rounded-2xl p-3">
-                  <div className="flex justify-between items-center text-[9px] font-bold text-on-surface-variant mb-2">
-                    <span>Tendência 30d</span>
-                    <span className="text-emerald-600 flex items-center gap-0.5">
-                      <TrendingUp size={10} /> +5.2%
-                    </span>
-                  </div>
-                  
-                  {/* Faux Sparkline */}
-                  <div className="h-10 w-full flex items-end gap-1 px-1">
-                    <div className="w-1/6 bg-primary/20 rounded-t h-1/3"></div>
-                    <div className="w-1/6 bg-primary/30 rounded-t h-1/2"></div>
-                    <div className="w-1/6 bg-primary/25 rounded-t h-2/5"></div>
-                    <div className="w-1/6 bg-primary/50 rounded-t h-3/4"></div>
-                    <div className="w-1/6 bg-primary/45 rounded-t h-2/3"></div>
-                    <div className="w-1/6 bg-primary rounded-t h-full"></div>
-                  </div>
                 </div>
 
                 {/* Formulário Interativo de Coleção */}
@@ -634,14 +619,15 @@ export const SearchDetails: React.FC = () => {
             <div>
               {searchResults.length > 0 && (
                 <p className="text-xs font-bold text-on-surface-variant uppercase tracking-wider mb-4 px-1">
-                  Resultados encontrados ({searchResults.length})
+                  {/* Isto é o tamanho da página retornada pela API, não o total de cartas — ainda não há paginação (T-futuro) */}
+                  Mostrando {searchResults.length} cartas
                 </p>
               )}
-              
+
               <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 gap-4">
                 {searchResults.map(card => {
-                  const price = card.tcgplayer?.prices?.holofoil?.market || card.tcgplayer?.prices?.normal?.market || 10;
-                  
+                  const price = precoUSD(card);
+
                   return (
                     <div
                       key={card.id}
@@ -666,7 +652,7 @@ export const SearchDetails: React.FC = () => {
                         </h4>
                         <div className="flex justify-between items-center mt-2 pt-1.5 border-t border-outline-variant/10">
                           <span className="font-extrabold text-[11px] text-on-surface">
-                            {formatPrice(price)}
+                            {price !== null ? formatPrice(price) : SEM_PRECO}
                           </span>
                           <span className="text-[8px] font-black text-on-surface-variant uppercase tracking-wider">
                             {card.types?.[0] || 'Incolor'}
@@ -680,7 +666,9 @@ export const SearchDetails: React.FC = () => {
 
               {searchResults.length === 0 && !loadingSearch && (
                 <div className="text-center py-16 text-on-surface-variant/80 text-sm font-medium">
-                  Use a barra acima para pesquisar qualquer carta do Pokémon TCG.
+                  {hasSearched
+                    ? `Nenhuma carta encontrada para "${lastSearchTerm}".`
+                    : 'Use a barra acima para pesquisar qualquer carta do Pokémon TCG.'}
                 </div>
               )}
             </div>

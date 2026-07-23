@@ -1,6 +1,7 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { useApp } from '../context/AppContext';
 import { MOCK_SETS } from '../services/pokemonApi';
+import { precoUSD, somarValorColecao, SEM_PRECO } from '../utils/pricing';
 import { Scan, Search, TrendingUp, ChevronRight, BookOpen, Sparkles, Award, Heart } from 'lucide-react';
 
 export const Dashboard: React.FC = () => {
@@ -35,30 +36,9 @@ export const Dashboard: React.FC = () => {
     };
   }, []);
 
-  // Calcular valor total da coleção
-  const getCollectionValue = () => {
-    return collection.reduce((acc, item) => {
-      const prices = item.cardDetails.tcgplayer?.prices;
-      let price = 0;
-
-      if (prices) {
-        if (item.variant === 'holo' && prices.holofoil?.market) {
-          price = prices.holofoil.market;
-        } else if (item.variant === 'reverse' && prices.reverseHolofoil?.market) {
-          price = prices.reverseHolofoil.market;
-        } else if (prices.normal?.market) {
-          price = prices.normal.market;
-        } else {
-          // Fallback se não achar a variante específica
-          price = prices.holofoil?.market || prices.normal?.market || prices.reverseHolofoil?.market || 0;
-        }
-      }
-
-      return acc + (price * item.quantity);
-    }, 0);
-  };
-
-  const totalValue = getCollectionValue();
+  // Calcular valor total da coleção usando a fonte única de preço (utils/pricing).
+  // itensSemPreco conta quantos itens não têm preço publicado, para não fingir um total exato.
+  const { totalUSD: totalValue, itensSemPreco } = somarValorColecao(collection);
 
 
   // Dados mockados para o gráfico com base no timeframe
@@ -136,12 +116,12 @@ export const Dashboard: React.FC = () => {
             <p className="text-xs font-bold text-on-surface-variant uppercase tracking-wider mt-1.5">
               Valor da Coleção TCG
             </p>
-          </div>
-          <div className="flex items-center gap-0.5 px-2.5 py-1 rounded-full font-bold text-xs text-emerald-600 bg-emerald-50 border border-emerald-100 text-center shadow-inner">
-            <svg className="w-4 h-4" aria-hidden="true" xmlns="http://www.w3.org/2000/svg" width="24" height="24" fill="none" viewBox="0 0 24 24">
-              <path stroke="currentColor" strokeLinecap="round" strokeLinejoin="round" strokeWidth="2.5" d="M12 6v13m0-13 4 4m-4-4-4 4"/>
-            </svg>
-            3.8%
+            {/* Aviso discreto: o total não é exato quando há cartas sem preço publicado */}
+            {itensSemPreco > 0 && (
+              <p className="text-[10px] font-medium text-on-surface-variant/70 mt-1">
+                {itensSemPreco} {itensSemPreco === 1 ? 'carta sem preço' : 'cartas sem preço'}
+              </p>
+            )}
           </div>
         </div>
 
@@ -306,10 +286,7 @@ export const Dashboard: React.FC = () => {
         ) : (
           <div className="flex overflow-x-auto pb-2 -mx-4 px-4 gap-4 snap-x scrollbar-hide no-scrollbar">
             {collection.slice(0, 5).map((item) => {
-              const prices = item.cardDetails.tcgplayer?.prices;
-              const marketPrice = item.variant === 'holo' && prices?.holofoil?.market
-                ? prices.holofoil.market
-                : prices?.normal?.market || 10.00;
+              const marketPrice = precoUSD(item.cardDetails, item.variant);
 
               return (
                 <div 
@@ -343,7 +320,7 @@ export const Dashboard: React.FC = () => {
                   </div>
                   <div className="flex justify-between items-center mt-2 pt-1 border-t border-outline-variant/10">
                     <span className="font-extrabold text-[11px] text-on-surface">
-                      {formatPrice(marketPrice)}
+                      {marketPrice === null ? SEM_PRECO : formatPrice(marketPrice)}
                     </span>
                     <TrendingUp size={12} className="text-emerald-600" />
                   </div>
@@ -374,8 +351,8 @@ export const Dashboard: React.FC = () => {
         ) : (
           <div className="flex overflow-x-auto pb-2 -mx-4 px-4 gap-4 snap-x scrollbar-hide no-scrollbar">
             {wishlist.map((item) => {
-              const prices = item.cardDetails.tcgplayer?.prices;
-              const marketPrice = prices?.holofoil?.market || prices?.normal?.market || 10.00;
+              // WishlistItem não tem variante fixa — usa a ordem padrão de fallback do utilitário.
+              const marketPrice = precoUSD(item.cardDetails);
 
               return (
                 <div 
@@ -402,7 +379,7 @@ export const Dashboard: React.FC = () => {
                   </div>
                   <div className="flex justify-between items-center mt-1 pt-1 border-t border-outline-variant/10">
                     <span className="font-black text-[10px] text-tertiary">
-                      {formatPrice(marketPrice)}
+                      {marketPrice === null ? SEM_PRECO : formatPrice(marketPrice)}
                     </span>
                   </div>
                 </div>

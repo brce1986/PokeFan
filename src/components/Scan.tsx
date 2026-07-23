@@ -3,6 +3,7 @@ import { useApp } from '../context/AppContext';
 import { pokemonApi, type TCGCard } from '../services/pokemonApi';
 import { Scan as ScanIcon, Upload, X, Plus, Minus, Check, Camera } from 'lucide-react';
 import { sanitizeFileName } from '../utils/security';
+import { precoUSD, SEM_PRECO } from '../utils/pricing';
 
 // Mapeamento dos arquivos locais para IDs de cartas reais da API
 const LOCAL_FILE_MAPPINGS: Record<string, { id: string; name: string }> = {
@@ -27,6 +28,9 @@ export const Scan: React.FC = () => {
   const [showFlash, setShowFlash] = useState(false);
   const [showSheet, setShowSheet] = useState(false);
   const [detectedCard, setDetectedCard] = useState<TCGCard | null>(null);
+  // Preço de mercado da carta selecionada. Null quando não há preço publicado —
+  // a gaveta mostra "Sem preço" em vez do antigo literal de US$ 10,00.
+  const precoMercado = precoUSD(detectedCard);
 
   // Form states
   const [condition, setCondition] = useState<'NM' | 'LP' | 'MP' | 'HP' | 'DMG'>('NM');
@@ -50,18 +54,17 @@ export const Scan: React.FC = () => {
       const mapped = LOCAL_FILE_MAPPINGS[cleanFileName];
       const cardId = mapped ? mapped.id : 'sv03pt5-006'; // Charizard ex se não achar
 
-      // Chamar API para obter dados reais da carta
+      // Buscar os dados da carta escolhida na API. Não há reconhecimento de
+      // imagem nenhum aqui — o nome do arquivo já foi mapeado (ou caiu no
+      // fallback) acima, isto só busca os detalhes da carta correspondente.
       const cardDetails = await pokemonApi.getCardById(cardId);
-      
-      // Simular delay de processamento de imagem da rede neural
-      setTimeout(() => {
-        setDetectedCard(cardDetails);
-        setCondition('NM');
-        setVariant(cardDetails.rarity?.toLowerCase().includes('rare') || cardDetails.subtypes?.includes('V') ? 'holo' : 'normal');
-        setQuantity(1);
-        setIsProcessing(false);
-        setShowSheet(true);
-      }, 1500);
+
+      setDetectedCard(cardDetails);
+      setCondition('NM');
+      setVariant(cardDetails.rarity?.toLowerCase().includes('rare') || cardDetails.subtypes?.includes('V') ? 'holo' : 'normal');
+      setQuantity(1);
+      setIsProcessing(false);
+      setShowSheet(true);
 
     } catch (err) {
       console.error(err);
@@ -207,14 +210,14 @@ export const Scan: React.FC = () => {
           </div>
         )}
 
-        {/* SIMULATING RECOGNITION LOADER */}
+        {/* LOADER: aparece enquanto busca os detalhes da carta escolhida na API */}
         {isProcessing && (
           <div className="absolute inset-0 z-20 bg-black/85 flex flex-col items-center justify-center text-center p-4">
             <div className="relative w-12 h-12 mb-3 flex items-center justify-center">
               <div className="absolute inset-0 rounded-full border-3 border-primary/20 border-t-primary animate-spin"></div>
               <ScanIcon className="text-primary w-5 h-5 animate-pulse" />
             </div>
-            <h3 className="text-white font-bold text-xs">Analisando...</h3>
+            <h3 className="text-white font-bold text-xs">Carregando carta...</h3>
           </div>
         )}
 
@@ -239,7 +242,7 @@ export const Scan: React.FC = () => {
             {/* Cabeçalho do Sheet */}
             <div className="px-5 py-3 flex justify-between items-center border-b border-outline-variant/15">
               <div>
-                <h3 className="font-extrabold text-sm text-on-surface">Carta Detectada</h3>
+                <h3 className="font-extrabold text-sm text-on-surface">Carta Selecionada</h3>
                 <p className="text-[9px] text-on-surface-variant font-bold uppercase tracking-wider">Confirme os detalhes da carta</p>
               </div>
               <button 
@@ -275,9 +278,7 @@ export const Scan: React.FC = () => {
                   <p className="text-[9px] text-on-surface-variant font-medium mt-0.5">Nº {detectedCard.number} • TCGplayer</p>
                   <div className="text-[10px] font-bold text-on-surface mt-1.5 flex items-center gap-1.5">
                     <span className="w-1.5 h-1.5 rounded-full bg-emerald-500 inline-block animate-pulse"></span>
-                    Mercado: {detectedCard.tcgplayer?.prices?.holofoil?.market || detectedCard.tcgplayer?.prices?.normal?.market
-                      ? `$ ${(detectedCard.tcgplayer.prices.holofoil?.market || detectedCard.tcgplayer.prices.normal?.market || 0).toFixed(2)}`
-                      : '$ 10.00'}
+                    Mercado: {precoMercado === null ? SEM_PRECO : `$ ${precoMercado.toFixed(2)}`}
                   </div>
                 </div>
               </div>

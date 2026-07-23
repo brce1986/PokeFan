@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { useApp, DEFAULT_AVATARS } from '../context/AppContext';
 import { User, CreditCard, Bell, LogOut, Check, Save, Download, Trash2, Camera } from 'lucide-react';
 import { supabase } from '../services/supabaseClient';
@@ -12,7 +12,6 @@ export const ProfileSettings: React.FC = () => {
     notifications,
     updateProfile,
     setCurrency,
-    setNotifications,
     logout,
     exportCollection,
     resetCollection
@@ -22,7 +21,14 @@ export const ProfileSettings: React.FC = () => {
   const [avatar, setAvatar] = useState(currentUser?.avatar || DEFAULT_AVATARS[0]);
   const [toastMessage, setToastMessage] = useState<string | null>(null);
   const [isEditingProfile, setIsEditingProfile] = useState(false);
-  const [apifyToken, setApifyToken] = useState(localStorage.getItem('pokefan_apify_token') || '');
+
+  // Limpeza única: o campo de token Apify foi removido (nenhum código em src/
+  // lia essa chave — os scrapers reais rodam fora do app, em scripts/ do lado
+  // do servidor). Apaga o token de quem já digitou um, seguindo o mesmo padrão
+  // usado em AppContext.tsx para a extinta 'pokefan_accounts'.
+  useEffect(() => {
+    localStorage.removeItem('pokefan_apify_token');
+  }, []);
 
   // Estados de Crop e Redimensionamento
   const [cropSrc, setCropSrc] = useState<string | null>(null);
@@ -284,23 +290,6 @@ export const ProfileSettings: React.FC = () => {
               className="w-full bg-surface-container-low border border-none rounded-xl px-4 py-3 text-xs font-semibold text-on-surface-variant/80"
             />
           </div>
-          <div className="pt-2">
-            <label className="block text-[9px] font-bold text-on-surface-variant uppercase tracking-wider mb-1">Token de API Apify (Scraper LigaPokémon)</label>
-            <input 
-              type="password" 
-              placeholder="apify_api_xxxxxxxxxxxxxxxxxxxxxx"
-              value={apifyToken} 
-              onChange={(e) => {
-                const val = e.target.value.trim();
-                setApifyToken(val);
-                localStorage.setItem('pokefan_apify_token', val);
-              }}
-              className="w-full bg-surface-container-low border border-outline-variant/15 rounded-xl px-4 py-3 text-xs font-semibold text-on-surface focus:outline-none focus:border-primary"
-            />
-            <p className="text-[8px] text-on-surface-variant font-bold uppercase tracking-wider mt-1.5 leading-snug">
-              Opcional. Permite consultar preços de mercado reais da LigaPokémon via Apify Actor.
-            </p>
-          </div>
         </div>
       </section>
 
@@ -345,33 +334,43 @@ export const ProfileSettings: React.FC = () => {
         </h3>
 
         <div className="space-y-2">
+          {/* Nenhum destes três avisos tem mecanismo de notificação real por trás
+              (sem push, sem e-mail, sem job agendado) — os controles ficam
+              visíveis para o usuário entender a preferência, mas desabilitados
+              e marcados "Em breve" para não prometer o que o app não entrega. */}
           {[
-            { 
-              key: 'priceAlerts', 
-              title: 'Alertas de Preço', 
-              desc: 'Notificar quando alguma carta da minha coleção sofrer variações bruscas de preço.' 
+            {
+              key: 'priceAlerts',
+              title: 'Alertas de Preço',
+              desc: 'Notificar quando alguma carta da minha coleção sofrer variações bruscas de preço.'
             },
-            { 
-              key: 'newSets', 
-              title: 'Novos Conjuntos TCG', 
-              desc: 'Ser notificado quando novas coleções de TCG forem catalogadas pela Nintendo.' 
+            {
+              key: 'newSets',
+              title: 'Novos Conjuntos TCG',
+              desc: 'Ser notificado quando novas coleções de TCG forem catalogadas pela Nintendo.'
+            },
+            {
+              key: 'weeklyDigest',
+              title: 'Resumo Semanal',
+              desc: 'Receber um resumo semanal com o desempenho e as novidades da sua coleção.'
             }
           ].map(opt => (
-            <div key={opt.key} className="flex items-center justify-between p-3 bg-surface rounded-2xl border border-outline-variant/10 gap-4">
+            <div key={opt.key} className="flex items-center justify-between p-3 bg-surface rounded-2xl border border-outline-variant/10 gap-4 opacity-60">
               <div className="min-w-0">
-                <h4 className="font-bold text-xs text-on-surface">{opt.title}</h4>
+                <div className="flex items-center gap-1.5 flex-wrap">
+                  <h4 className="font-bold text-xs text-on-surface">{opt.title}</h4>
+                  <span className="text-[7px] font-black text-on-surface-variant uppercase bg-surface-container-high px-1.5 py-0.5 rounded-full tracking-wider">
+                    Em breve
+                  </span>
+                </div>
                 <p className="text-[10px] text-on-surface-variant mt-0.5 leading-snug">{opt.desc}</p>
               </div>
-              <label className="relative inline-flex inline-flex items-center cursor-pointer flex-shrink-0">
-                <input 
+              <label className="relative inline-flex items-center cursor-not-allowed flex-shrink-0">
+                <input
                   type="checkbox"
                   checked={(notifications as any)[opt.key]}
-                  onChange={() => {
-                    setNotifications({
-                      ...notifications,
-                      [opt.key]: !(notifications as any)[opt.key]
-                    });
-                  }}
+                  disabled
+                  readOnly
                   className="sr-only peer"
                 />
                 <div className="w-9 h-5 bg-surface-variant rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-neutral-300 after:border after:rounded-full after:h-4 after:w-4 after:transition-all peer-checked:bg-primary"></div>

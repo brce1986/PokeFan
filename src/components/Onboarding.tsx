@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { useApp } from '../context/AppContext';
 import { Eye, EyeOff, UserPlus, LogIn, ChevronRight, MailCheck } from 'lucide-react';
 
@@ -13,9 +13,26 @@ const GoogleIcon: React.FC<{ size?: number }> = ({ size = 18 }) => (
 );
 
 export const Onboarding: React.FC = () => {
-  const { login, loginWithGoogle, loginAsGuest, register } = useApp();
-  const [screen, setScreen] = useState<'welcome' | 'login' | 'register' | 'confirm-email'>('welcome');
+  const {
+    login, loginWithGoogle, loginAsGuest, register,
+    requestPasswordReset, updatePassword, awaitingPasswordReset
+  } = useApp();
+  const [screen, setScreen] = useState<'welcome' | 'login' | 'register' | 'confirm-email' | 'forgot' | 'forgot-sent' | 'new-password'>('welcome');
   const [busy, setBusy] = useState(false);
+
+  // Recuperação de senha
+  const [forgotEmail, setForgotEmail] = useState('');
+  const [forgotError, setForgotError] = useState('');
+  const [newPassword, setNewPassword] = useState('');
+  const [newPasswordConfirm, setNewPasswordConfirm] = useState('');
+  const [newPasswordError, setNewPasswordError] = useState('');
+  const [newPasswordOk, setNewPasswordOk] = useState(false);
+
+  // Chegou pelo link do e-mail de recuperação: pular direto para a troca de
+  // senha, ignorando qualquer tela em que a pessoa estivesse antes.
+  useEffect(() => {
+    if (awaitingPasswordReset) setScreen('new-password');
+  }, [awaitingPasswordReset]);
 
   // Login States
   const [loginEmail, setLoginEmail] = useState('');
@@ -32,9 +49,9 @@ export const Onboarding: React.FC = () => {
   const [regAvatar] = useState("data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='%239ca3af'><path d='M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm0 4c1.93 0 3.5 1.57 3.5 3.5S13.93 13 12 13s-3.5-1.57-3.5-3.5S10.07 6 12 6zm0 14c-2.03 0-4.43-.82-6.14-2.88C7.55 15.8 9.68 15 12 15s4.45.8 6.14 2.12C16.43 19.18 14.03 20 12 20z'/></svg>");
   const [regError, setRegError] = useState('');
 
-  // sanitizeInput NÃO se aplica a e-mail nem a nome: ele remove - e ' , o que
-  // corrompe endereços como maria-silva@gmail.com e nomes como Jean-Pierre.
-  // A proteção correta aqui é validar formato, não mutilar a entrada.
+  // Campos de identidade não passam por sanitizeInput: a proteção correta aqui
+  // é validar o formato, não mutilar a entrada. Endereços como
+  // maria-silva@gmail.com e nomes como Jean-Pierre precisam chegar íntegros.
   const isValidEmail = (value: string) => /^[^\s@]+@[^\s@]+\.[^\s@]{2,}$/.test(value);
 
   // Mínimo do Supabase. Subir aqui exige subir também no painel do projeto.
@@ -100,6 +117,47 @@ export const Onboarding: React.FC = () => {
     if (result.needsEmailConfirmation) {
       setScreen('confirm-email');
     }
+  };
+
+  const handleForgot = async (e: React.FormEvent) => {
+    e.preventDefault();
+    setForgotError('');
+    const email = forgotEmail.trim();
+    if (!isValidEmail(email)) {
+      setForgotError('Digite um e-mail válido.');
+      return;
+    }
+    setBusy(true);
+    const result = await requestPasswordReset(email);
+    setBusy(false);
+    if (!result.ok) {
+      setForgotError(result.error || 'Não foi possível enviar o e-mail.');
+      return;
+    }
+    // Sucesso mesmo para e-mail sem conta: confirmar a existência permitiria
+    // descobrir quem tem cadastro.
+    setScreen('forgot-sent');
+  };
+
+  const handleNewPassword = async (e: React.FormEvent) => {
+    e.preventDefault();
+    setNewPasswordError('');
+    if (newPassword.length < MIN_PASSWORD_LENGTH) {
+      setNewPasswordError(`A senha precisa ter pelo menos ${MIN_PASSWORD_LENGTH} caracteres.`);
+      return;
+    }
+    if (newPassword !== newPasswordConfirm) {
+      setNewPasswordError('As senhas não são iguais.');
+      return;
+    }
+    setBusy(true);
+    const result = await updatePassword(newPassword);
+    setBusy(false);
+    if (!result.ok) {
+      setNewPasswordError(result.error || 'Não foi possível alterar a senha.');
+      return;
+    }
+    setNewPasswordOk(true);
   };
 
   const handleGoogle = async () => {
@@ -257,6 +315,14 @@ export const Onboarding: React.FC = () => {
               </div>
 
               <button
+                type="button"
+                onClick={() => { setForgotEmail(loginEmail.trim()); setForgotError(''); setScreen('forgot'); }}
+                className="block w-full text-right text-[11px] font-bold text-primary hover:underline -mt-1"
+              >
+                Esqueci minha senha
+              </button>
+
+              <button
                 type="submit"
                 disabled={busy}
                 className="w-full font-bold py-4 rounded-xl transition-all active:scale-[0.98] flex items-center justify-center gap-2 shadow-md bg-primary text-white hover:bg-primary-container mt-6 disabled:opacity-60 disabled:cursor-not-allowed"
@@ -280,6 +346,162 @@ export const Onboarding: React.FC = () => {
                 Continuar com Google
               </button>
             </form>
+          </div>
+        )}
+
+        {screen === 'forgot' && (
+          <div className="glass-panel rounded-3xl p-6 shadow-ambient-lvl2 border border-white/40 space-y-4">
+            <div className="flex justify-between items-center mb-2">
+              <h2 className="text-xl font-extrabold text-on-surface tracking-tight">Recuperar acesso</h2>
+              <button onClick={() => setScreen('login')} className="text-xs font-bold text-primary hover:underline">
+                Voltar
+              </button>
+            </div>
+
+            {forgotError && (
+              <div className="p-3 text-xs bg-error-container text-on-error-container border border-error/20 rounded-xl">
+                {forgotError}
+              </div>
+            )}
+
+            <p className="text-sm text-on-surface-variant leading-relaxed">
+              Informe o e-mail da sua conta. Enviaremos um link para você criar uma nova senha.
+            </p>
+
+            <form onSubmit={handleForgot} className="space-y-4">
+              <div>
+                <label className="block text-[11px] font-bold text-on-surface-variant uppercase tracking-wider mb-1">
+                  E-mail
+                </label>
+                <input
+                  type="email"
+                  value={forgotEmail}
+                  onChange={(e) => setForgotEmail(e.target.value)}
+                  placeholder="voce@email.com"
+                  autoComplete="email"
+                  className="w-full bg-surface-container-low border border-outline-variant/30 rounded-xl px-4 py-3 text-sm focus:outline-none focus:ring-2 focus:ring-tertiary focus:bg-white transition-all text-on-surface font-medium"
+                />
+              </div>
+
+              <button
+                type="submit"
+                disabled={busy}
+                className="w-full font-bold py-4 rounded-xl transition-all active:scale-[0.98] shadow-md bg-primary text-white hover:bg-primary-container disabled:opacity-60 disabled:cursor-not-allowed"
+              >
+                {busy ? 'ENVIANDO...' : 'ENVIAR LINK'}
+              </button>
+            </form>
+          </div>
+        )}
+
+        {screen === 'forgot-sent' && (
+          <div className="glass-panel rounded-3xl p-6 shadow-ambient-lvl2 border border-white/40 space-y-4 text-center animate-fade-in">
+            <div className="w-16 h-16 mx-auto rounded-full bg-primary/10 border border-primary/20 flex items-center justify-center">
+              <MailCheck size={30} className="text-primary" />
+            </div>
+
+            <h2 className="text-xl font-extrabold text-on-surface tracking-tight">Verifique seu e-mail</h2>
+
+            <p className="text-sm text-on-surface-variant leading-relaxed">
+              Se existir uma conta para{' '}
+              <span className="font-bold text-on-surface break-all">{forgotEmail.trim()}</span>,
+              o link de redefinição chegará em instantes.
+            </p>
+
+            <p className="text-xs text-on-surface-variant bg-surface-container-low rounded-xl p-3 border border-outline-variant/30">
+              Não recebeu? Confira a caixa de spam. O envio tem limite por hora — se
+              tentar várias vezes seguidas, aguarde alguns minutos.
+            </p>
+
+            <button
+              onClick={() => setScreen('login')}
+              className="w-full font-bold py-4 rounded-xl transition-all active:scale-[0.98] shadow-md bg-primary text-white hover:bg-primary-container"
+            >
+              VOLTAR PARA ENTRAR
+            </button>
+          </div>
+        )}
+
+        {screen === 'new-password' && (
+          <div className="glass-panel rounded-3xl p-6 shadow-ambient-lvl2 border border-white/40 space-y-4 animate-fade-in">
+            {newPasswordOk ? (
+              <div className="text-center space-y-4">
+                <div className="w-16 h-16 mx-auto rounded-full bg-primary/10 border border-primary/20 flex items-center justify-center">
+                  <MailCheck size={30} className="text-primary" />
+                </div>
+                <h2 className="text-xl font-extrabold text-on-surface tracking-tight">Senha alterada</h2>
+                <p className="text-sm text-on-surface-variant leading-relaxed">
+                  Pronto. Sua nova senha já está valendo e você pode entrar normalmente.
+                </p>
+                <button
+                  onClick={() => { setScreen('login'); setNewPassword(''); setNewPasswordConfirm(''); }}
+                  className="w-full font-bold py-4 rounded-xl transition-all active:scale-[0.98] shadow-md bg-primary text-white hover:bg-primary-container"
+                >
+                  CONTINUAR
+                </button>
+              </div>
+            ) : (
+              <>
+                <h2 className="text-xl font-extrabold text-on-surface tracking-tight">Criar nova senha</h2>
+
+                {newPasswordError && (
+                  <div className="p-3 text-xs bg-error-container text-on-error-container border border-error/20 rounded-xl">
+                    {newPasswordError}
+                  </div>
+                )}
+
+                <form onSubmit={handleNewPassword} className="space-y-4">
+                  <div>
+                    <label className="block text-[11px] font-bold text-on-surface-variant uppercase tracking-wider mb-1">
+                      Nova senha
+                    </label>
+                    <div className="relative">
+                      <input
+                        type={showRegPassword ? 'text' : 'password'}
+                        value={newPassword}
+                        onChange={(e) => setNewPassword(e.target.value)}
+                        placeholder={`Pelo menos ${MIN_PASSWORD_LENGTH} caracteres`}
+                        autoComplete="new-password"
+                        className="w-full bg-surface-container-low border border-outline-variant/30 rounded-xl pl-4 pr-12 py-3 text-sm focus:outline-none focus:ring-2 focus:ring-tertiary focus:bg-white transition-all text-on-surface font-medium"
+                      />
+                      <button
+                        type="button"
+                        onClick={() => setShowRegPassword(!showRegPassword)}
+                        aria-label={showRegPassword ? 'Ocultar senha' : 'Mostrar senha'}
+                        className="absolute right-3 top-1/2 -translate-y-1/2 text-on-surface-variant hover:text-on-surface"
+                      >
+                        {showRegPassword ? <EyeOff size={18} /> : <Eye size={18} />}
+                      </button>
+                    </div>
+                  </div>
+
+                  <div>
+                    <label className="block text-[11px] font-bold text-on-surface-variant uppercase tracking-wider mb-1">
+                      Confirmar nova senha
+                    </label>
+                    <input
+                      type={showRegPassword ? 'text' : 'password'}
+                      value={newPasswordConfirm}
+                      onChange={(e) => setNewPasswordConfirm(e.target.value)}
+                      placeholder="Repita a senha"
+                      autoComplete="new-password"
+                      className="w-full bg-surface-container-low border border-outline-variant/30 rounded-xl px-4 py-3 text-sm focus:outline-none focus:ring-2 focus:ring-tertiary focus:bg-white transition-all text-on-surface font-medium"
+                    />
+                    {newPasswordConfirm.length > 0 && newPassword !== newPasswordConfirm && (
+                      <p className="mt-1.5 text-[11px] font-semibold text-error">As senhas não são iguais.</p>
+                    )}
+                  </div>
+
+                  <button
+                    type="submit"
+                    disabled={busy}
+                    className="w-full font-bold py-4 rounded-xl transition-all active:scale-[0.98] shadow-md bg-primary text-white hover:bg-primary-container disabled:opacity-60 disabled:cursor-not-allowed"
+                  >
+                    {busy ? 'SALVANDO...' : 'SALVAR NOVA SENHA'}
+                  </button>
+                </form>
+              </>
+            )}
           </div>
         )}
 

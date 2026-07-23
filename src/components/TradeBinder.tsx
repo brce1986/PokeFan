@@ -1,46 +1,70 @@
 import React, { useState, useEffect } from 'react';
 import { useApp, type CollectionItem } from '../context/AppContext';
 import { Share2, Copy, Send, Check, X, RefreshCw, QrCode } from 'lucide-react';
+import { precoUSD, SEM_PRECO } from '../utils/pricing';
 
 export const TradeBinder: React.FC = () => {
   const { collection, formatPrice, setActiveTab, selectedCardId } = useApp();
   const [selectedTradeItem, setSelectedTradeItem] = useState<CollectionItem | null>(null);
   const [toastMessage, setToastMessage] = useState<string | null>(null);
 
-  // Selecionar automaticamente a carta ativa vinda do fluxo de detalhes
+  // Selecionar automaticamente a carta ativa vinda do fluxo de detalhes —
+  // só faz sentido se ela tiver excedente (quantity > 1), senão não há nada
+  // disponível para troca e o modal mostraria "Estoque: 0".
   useEffect(() => {
     if (selectedCardId) {
       const ownedItem = collection.find(item => item.cardDetails.id === selectedCardId);
-      if (ownedItem) {
+      if (ownedItem && ownedItem.quantity > 1) {
         setSelectedTradeItem(ownedItem);
       }
     }
   }, [selectedCardId, collection]);
 
-  // Toda a coleção está disponível para trocas
-  const tradeItems = collection;
+  // Disponível para troca é a quantidade excedente (quantity - 1): a cópia
+  // restante fica guardada na coleção. Cartas sem excedente não entram aqui.
+  const tradeItems = collection.filter(item => item.quantity > 1);
 
-  const handleShareSocial = (platform: string) => {
+  // Devolve o preço já formatado na moeda do usuário, ou o texto honesto de
+  // "sem preço" quando a carta não tem valor de mercado publicado.
+  const priceLabel = (item: CollectionItem): string => {
+    const usd = precoUSD(item.cardDetails, item.variant);
+    return usd === null ? SEM_PRECO : formatPrice(usd);
+  };
+
+  const handleShareSocial = (platform: 'WhatsApp' | 'X / Twitter' | 'copy') => {
     if (!selectedTradeItem) return;
-    
+
     const cardName = selectedTradeItem.cardDetails.name;
     const condition = selectedTradeItem.condition;
-    const value = formatPrice(
-      selectedTradeItem.cardDetails.tcgplayer?.prices?.holofoil?.market || 
-      selectedTradeItem.cardDetails.tcgplayer?.prices?.normal?.market || 
-      10
-    );
+    const value = priceLabel(selectedTradeItem);
 
     const shareMessage = `⚡ DISPONÍVEL PARA TROCA no PokéFan! ⚡\n👉 ${cardName} (${selectedTradeItem.variant === 'holo' ? 'Holográfica' : 'Normal'})\n🔹 Condição: ${condition}\n🔹 Valor: ${value}\nInteressados me chamem no privado!`;
-    
+
+    const avisar = (msg: string) => {
+      setToastMessage(msg);
+      setTimeout(() => setToastMessage(null), 3000);
+    };
+
     if (platform === 'copy') {
       navigator.clipboard.writeText(shareMessage);
-      setToastMessage('Link de troca copiado!');
-      setTimeout(() => setToastMessage(null), 3000);
+      avisar('Mensagem de troca copiada!');
+      return;
+    }
+
+    const destino = platform === 'WhatsApp'
+      ? `https://wa.me/?text=${encodeURIComponent(shareMessage)}`
+      : `https://twitter.com/intent/tweet?text=${encodeURIComponent(shareMessage)}`;
+
+    // O toast diz "abrindo", não "compartilhado": abrir o compositor não é o
+    // mesmo que a pessoa ter enviado a mensagem. E se o bloqueador de pop-up
+    // barrar, window.open devolve null — aí o certo é oferecer o texto copiado
+    // em vez de anunciar um sucesso que não houve.
+    const janela = window.open(destino, '_blank', 'noopener,noreferrer');
+    if (janela) {
+      avisar(`Abrindo o ${platform}...`);
     } else {
-      // Simular abertura de aba
-      setToastMessage(`Compartilhado no ${platform} com sucesso!`);
-      setTimeout(() => setToastMessage(null), 3000);
+      navigator.clipboard.writeText(shareMessage);
+      avisar('Pop-up bloqueado. Mensagem copiada para você colar.');
     }
   };
 
@@ -67,9 +91,9 @@ export const TradeBinder: React.FC = () => {
             <RefreshCw size={28} className="text-secondary-container" />
           </div>
           <div className="space-y-1">
-            <h3 className="font-extrabold text-sm text-on-surface">Nenhuma Carta Encontrada</h3>
+            <h3 className="font-extrabold text-sm text-on-surface">Nenhuma Carta Repetida</h3>
             <p className="text-xs text-on-surface-variant max-w-xs mx-auto">
-              Sua pasta de trocas mostra automaticamente as cartas que você tem na coleção.
+              Só aparecem aqui cartas repetidas (quantidade maior que 1) — a primeira cópia de cada carta fica guardada na sua coleção.
             </p>
           </div>
           <button
@@ -82,8 +106,7 @@ export const TradeBinder: React.FC = () => {
       ) : (
         <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 gap-4">
           {tradeItems.map(item => {
-            const price = item.cardDetails.tcgplayer?.prices?.holofoil?.market || item.cardDetails.tcgplayer?.prices?.normal?.market || 10;
-            const tradeQty = item.quantity;
+            const tradeQty = item.quantity - 1;
 
             return (
               <div
@@ -113,10 +136,10 @@ export const TradeBinder: React.FC = () => {
                   </h4>
                   <div className="flex justify-between items-center mt-2 pt-1 border-t border-outline-variant/5">
                     <span className="font-extrabold text-[11px] text-on-surface">
-                      {formatPrice(price)}
+                      {priceLabel(item)}
                     </span>
                     <span className="text-[8px] font-black text-on-surface-variant uppercase">
-                      Repetidas: {item.quantity}
+                      Repetidas: {item.quantity - 1}
                     </span>
                   </div>
                 </div>
@@ -182,11 +205,7 @@ export const TradeBinder: React.FC = () => {
                 <div>
                   <span className="text-[9px] font-bold text-on-surface-variant uppercase tracking-wider block">Valor de Referência</span>
                   <span className="text-base font-black text-emerald-600">
-                    {formatPrice(
-                      selectedTradeItem.cardDetails.tcgplayer?.prices?.holofoil?.market || 
-                      selectedTradeItem.cardDetails.tcgplayer?.prices?.normal?.market || 
-                      10
-                    )}
+                    {priceLabel(selectedTradeItem)}
                   </span>
                 </div>
                 <div className="w-10 h-10 bg-white rounded-lg flex items-center justify-center border border-outline-variant/20 p-1 flex-shrink-0">

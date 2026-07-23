@@ -1,6 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { useApp, type CollectionItem } from '../context/AppContext';
 import { pokemonApi, type TCGCard, type TCGSet, MOCK_SETS } from '../services/pokemonApi';
+import { precoUSD, somarValorColecao, SEM_PRECO } from '../utils/pricing';
 import { ArrowLeft, Search, Plus, ChevronRight, SlidersHorizontal, X } from 'lucide-react';
 
 export const Collection: React.FC = () => {
@@ -15,6 +16,8 @@ export const Collection: React.FC = () => {
 
   const [setsList, setSetsList] = useState<TCGSet[]>(MOCK_SETS);
   const [loadingSets, setLoadingSets] = useState(false);
+  // true quando a API pública falhou e a tela caiu para o catálogo mockado (MOCK_SETS)
+  const [usingFallbackSets, setUsingFallbackSets] = useState(false);
   const [setSearchText, setSetSearchText] = useState('');
   
   // Set Detail View States
@@ -42,8 +45,12 @@ export const Collection: React.FC = () => {
       try {
         const data = await pokemonApi.getSets();
         setSetsList(data);
+        setUsingFallbackSets(false);
       } catch (err) {
         console.error(err);
+        // API pública instável: cai para MOCK_SETS e avisa o usuário na tela
+        setSetsList(MOCK_SETS);
+        setUsingFallbackSets(true);
       } finally {
         setLoadingSets(false);
       }
@@ -78,20 +85,12 @@ export const Collection: React.FC = () => {
 
     const cardsInCollection = collection.filter(item => item.cardDetails.id.startsWith(selectedSetId!));
     const uniqueCount = cardsInCollection.length;
-    
-    const valuation = cardsInCollection.reduce((acc, item) => {
-      const prices = item.cardDetails.tcgplayer?.prices;
-      let price = 0;
-      if (prices) {
-        if (item.variant === 'holo' && prices.holofoil?.market) price = prices.holofoil.market;
-        else if (item.variant === 'reverse' && prices.reverseHolofoil?.market) price = prices.reverseHolofoil.market;
-        else price = prices.normal?.market || prices.holofoil?.market || 10.00;
-      }
-      return acc + (price * item.quantity);
-    }, 0);
 
-    const percentage = selectedSet.printedTotal > 0 
-      ? Math.round((uniqueCount / selectedSet.printedTotal) * 100) 
+    // Fonte única de preço (utils/pricing) — nunca fabrica valor para carta sem preço publicado.
+    const { totalUSD: valuation, itensSemPreco } = somarValorColecao(cardsInCollection);
+
+    const percentage = selectedSet.printedTotal > 0
+      ? Math.round((uniqueCount / selectedSet.printedTotal) * 100)
       : 0;
 
     return {
@@ -99,7 +98,8 @@ export const Collection: React.FC = () => {
       uniqueCount,
       totalCount: selectedSet.printedTotal,
       percentage,
-      valuation
+      valuation,
+      itensSemPreco
     };
   };
 
@@ -147,14 +147,8 @@ export const Collection: React.FC = () => {
     { id: 'Colorless', name: 'Incolor', color: 'bg-slate-400' }
   ];
 
-  // Obter preço de mercado de um item
-  const getItemPrice = (item: CollectionItem) => {
-    const prices = item.cardDetails.tcgplayer?.prices;
-    if (!prices) return 10.00;
-    if (item.variant === 'holo' && prices.holofoil?.market) return prices.holofoil.market;
-    if (item.variant === 'reverse' && prices.reverseHolofoil?.market) return prices.reverseHolofoil.market;
-    return prices.normal?.market || prices.holofoil?.market || 10.00;
-  };
+  // Obter preço de mercado de um item — null quando não há preço publicado (ver utils/pricing).
+  const getItemPrice = (item: CollectionItem): number | null => precoUSD(item.cardDetails, item.variant);
 
   // Contador de filtros ativos
   const activeFiltersCount = 
@@ -197,10 +191,11 @@ export const Collection: React.FC = () => {
     })
     .sort((a, b) => {
       if (sortBy === 'value-desc') {
-        return getItemPrice(b) - getItemPrice(a);
+        // Item sem preço (null) vale 0 só para fins de ordenação — não é exibido como preço real.
+        return (getItemPrice(b) ?? 0) - (getItemPrice(a) ?? 0);
       }
       if (sortBy === 'value-asc') {
-        return getItemPrice(a) - getItemPrice(b);
+        return (getItemPrice(a) ?? 0) - (getItemPrice(b) ?? 0);
       }
       if (sortBy === 'name') {
         return a.cardDetails.name.localeCompare(b.cardDetails.name);
@@ -220,7 +215,14 @@ export const Collection: React.FC = () => {
 
   return (
     <div className="space-y-6 pb-6 animate-fade-in select-none">
-      
+
+      {/* Aviso de fallback: API pública instável, catálogo exibido é o mockado (MOCK_SETS) */}
+      {usingFallbackSets && (
+        <div className="bg-amber-50 border border-amber-200 text-amber-800 text-xs font-semibold rounded-2xl px-4 py-2.5">
+          Catálogo indisponível no momento. Mostrando dados limitados.
+        </div>
+      )}
+
       {/* 1. VISÃO DOS BINDERS (Lista de Sets) */}
       {!selectedSetId ? (
         <>
@@ -288,12 +290,10 @@ export const Collection: React.FC = () => {
                   const uniqueOwned = collection.filter(item => item.cardDetails.id.startsWith(set.id)).length;
                   const percentage = set.printedTotal > 0 ? Math.round((uniqueOwned / set.printedTotal) * 100) : 0;
                   
-                  const setValuation = collection
-                    .filter(item => item.cardDetails.id.startsWith(set.id))
-                    .reduce((sum, item) => {
-                      const price = item.cardDetails.tcgplayer?.prices?.holofoil?.market || item.cardDetails.tcgplayer?.prices?.normal?.market || 10;
-                      return sum + (price * item.quantity);
-                    }, 0);
+                  // Fonte única de preço (utils/pricing) — itens sem preço publicado são ignorados na soma.
+                  const { totalUSD: setValuation } = somarValorColecao(
+                    collection.filter(item => item.cardDetails.id.startsWith(set.id))
+                  );
 
                   return (
                     <div
@@ -469,7 +469,7 @@ export const Collection: React.FC = () => {
                                 {item.cardDetails.id.split('-')[0].toUpperCase()}
                               </span>
                               <span className="text-xs font-black text-emerald-600">
-                                {formatPrice(price)}
+                                {price === null ? SEM_PRECO : formatPrice(price)}
                               </span>
                             </div>
                           </div>
@@ -650,9 +650,10 @@ export const Collection: React.FC = () => {
                             {card.name}
                           </h4>
                           <div className="text-[11px] font-extrabold text-on-surface mt-1 flex items-center gap-0.5">
-                            {card.tcgplayer?.prices?.holofoil?.market || card.tcgplayer?.prices?.normal?.market
-                              ? formatPrice(card.tcgplayer.prices.holofoil?.market || card.tcgplayer.prices.normal?.market || 0)
-                              : formatPrice(10.00)}
+                            {(() => {
+                              const price = precoUSD(card);
+                              return price === null ? SEM_PRECO : formatPrice(price);
+                            })()}
                           </div>
                         </div>
                       </div>

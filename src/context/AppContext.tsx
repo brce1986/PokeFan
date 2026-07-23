@@ -60,6 +60,7 @@ export interface NotificationSettings {
 
 interface AppContextType {
   currentUser: User | null;
+  awaitingPasswordReset: boolean;
   usersList: User[];
   collection: CollectionItem[];
   wishlist: WishlistItem[];
@@ -72,6 +73,8 @@ interface AppContextType {
   login: (email: string, password: string) => Promise<AuthResult>;
   loginWithGoogle: () => Promise<AuthResult>;
   loginAsGuest: () => void;
+  requestPasswordReset: (email: string) => Promise<AuthResult>;
+  updatePassword: (newPassword: string) => Promise<AuthResult>;
   register: (username: string, email: string, password: string, avatar: string) => Promise<AuthResult>;
   logout: () => void;
   updateProfile: (username: string, avatar: string) => void;
@@ -121,6 +124,10 @@ const DEFAULT_AVATARS = [
 
 export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children }) => {
   const [currentUser, setCurrentUser] = useState<User | null>(null);
+  // Ligado pelo evento PASSWORD_RECOVERY: a sessão do link de e-mail existe, mas
+  // serve só para trocar a senha. Enquanto true, o app mostra a tela de nova
+  // senha em vez de deixar entrar direto no painel.
+  const [awaitingPasswordReset, setAwaitingPasswordReset] = useState(false);
   const [usersList, setUsersList] = useState<User[]>([]);
   const [collection, setCollection] = useState<CollectionItem[]>([]);
   const [wishlist, setWishlist] = useState<WishlistItem[]>([]);
@@ -216,7 +223,13 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
         }
       });
 
-      const { data: { subscription } } = supabase.auth.onAuthStateChange((_event, session) => {
+      const { data: { subscription } } = supabase.auth.onAuthStateChange((evento, session) => {
+        // O link do e-mail de recuperação cria uma sessão válida. Sem esta
+        // marcação o app entraria direto no painel e a pessoa nunca chegaria
+        // à tela de trocar a senha — que era o motivo de ter clicado no link.
+        if (evento === 'PASSWORD_RECOVERY') {
+          setAwaitingPasswordReset(true);
+        }
         if (session?.user) {
           // Sessão real encerra o modo demonstração. Fica aqui e não em
           // login() para cobrir também o retorno do OAuth do Google, que não
@@ -435,6 +448,49 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
     return { ok: true };
   };
 
+  /**
+   * Dispara o e-mail de redefinição de senha.
+   *
+   * Responde sempre com sucesso, mesmo para e-mail inexistente: revelar quais
+   * endereços têm conta permitiria enumerar usuários. A tela mostra a mesma
+   * mensagem nos dois casos.
+   *
+   * O link do e-mail volta para a raiz do app com um token na URL. O
+   * supabase-js o consome sozinho e emite PASSWORD_RECOVERY no
+   * onAuthStateChange, que é onde `awaitingPasswordReset` é ligado.
+   */
+  const requestPasswordReset = async (email: string): Promise<AuthResult> => {
+    if (!supabase) {
+      return { ok: false, error: 'Recuperação indisponível: o servidor não está configurado.' };
+    }
+
+    const { error } = await supabase.auth.resetPasswordForEmail(email, {
+      redirectTo: window.location.origin
+    });
+
+    // Limite de envio estourado precisa ser dito: é a única falha em que
+    // insistir não adianta e o usuário fica esperando um e-mail que não vem.
+    if (error && /rate limit|too many requests/i.test(error.message)) {
+      return { ok: false, error: traduzirErroAuth(error.message) };
+    }
+    if (error) console.error('Falha ao solicitar redefinição de senha:', error);
+
+    return { ok: true };
+  };
+
+  /** Grava a nova senha. Exige a sessão temporária vinda do link do e-mail. */
+  const updatePassword = async (newPassword: string): Promise<AuthResult> => {
+    if (!supabase) {
+      return { ok: false, error: 'Recuperação indisponível: o servidor não está configurado.' };
+    }
+
+    const { error } = await supabase.auth.updateUser({ password: newPassword });
+    if (error) return { ok: false, error: traduzirErroAuth(error.message) };
+
+    setAwaitingPasswordReset(false);
+    return { ok: true };
+  };
+
   const logout = () => {
     if (supabase) {
       supabase.auth.signOut().catch(err => console.error(err));
@@ -616,9 +672,12 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
         selectedCardId,
         selectedSetId,
         apiKey,
+        awaitingPasswordReset,
         login,
         loginWithGoogle,
         loginAsGuest,
+        requestPasswordReset,
+        updatePassword,
         register,
         logout,
         updateProfile,
