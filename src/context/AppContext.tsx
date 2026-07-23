@@ -25,6 +25,31 @@ export interface User {
   collectorRank: string;
 }
 
+/**
+ * Resultado de uma operação de autenticação.
+ * `needsEmailConfirmation` distingue "conta criada, falta confirmar o e-mail"
+ * de "conta criada e sessão ativa" — os dois são sucesso, mas só o segundo
+ * permite gravar na nuvem.
+ */
+export interface AuthResult {
+  ok: boolean;
+  needsEmailConfirmation?: boolean;
+  error?: string;
+}
+
+/** Traduz a mensagem crua do Supabase para algo acionável em português. */
+const traduzirErroAuth = (mensagem: string): string => {
+  const m = mensagem.toLowerCase();
+  if (m.includes('invalid login credentials')) return 'E-mail ou senha incorretos.';
+  if (m.includes('email not confirmed')) return 'Confirme seu e-mail antes de entrar. O link está na sua caixa de entrada.';
+  if (m.includes('user already registered')) return 'Este e-mail já está cadastrado. Tente entrar.';
+  if (m.includes('password should be at least')) return 'A senha precisa ter pelo menos 6 caracteres.';
+  if (m.includes('rate limit') || m.includes('too many requests')) return 'Muitas tentativas seguidas. Aguarde um minuto e tente de novo.';
+  if (m.includes('provider is not enabled')) return 'O login com Google ainda não foi habilitado no servidor.';
+  if (m.includes('failed to fetch') || m.includes('network')) return 'Sem conexão com o servidor. Verifique sua internet.';
+  return 'Não foi possível concluir. Tente novamente em instantes.';
+};
+
 export type CurrencyType = 'USD' | 'EUR' | 'JPY' | 'BRL';
 
 export interface NotificationSettings {
@@ -44,9 +69,10 @@ interface AppContextType {
   selectedCardId: string | null;
   selectedSetId: string | null;
   apiKey: string;
-  login: (email: string, password: string) => boolean | Promise<boolean>;
+  login: (email: string, password: string) => Promise<AuthResult>;
+  loginWithGoogle: () => Promise<AuthResult>;
   loginAsGuest: () => void;
-  register: (username: string, email: string, password: string, avatar: string) => boolean | Promise<boolean>;
+  register: (username: string, email: string, password: string, avatar: string) => Promise<AuthResult>;
   logout: () => void;
   updateProfile: (username: string, avatar: string) => void;
   addCardToCollection: (card: TCGCard, quantity: number, condition: CollectionItem['condition'], variant: CollectionItem['variant']) => void;
@@ -192,6 +218,10 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
 
       const { data: { subscription } } = supabase.auth.onAuthStateChange((_event, session) => {
         if (session?.user) {
+          // Sessão real encerra o modo demonstração. Fica aqui e não em
+          // login() para cobrir também o retorno do OAuth do Google, que não
+          // passa por login() — a sessão chega pela URL.
+          localStorage.removeItem(GUEST_FLAG_KEY);
           const sUser: User = {
             username: session.user.user_metadata.username || session.user.email?.split('@')[0] || 'Treinador',
             email: session.user.email || '',
@@ -302,11 +332,16 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
   // Autenticação — Supabase é a única fonte de verdade.
   // Não existe fallback local: uma falha de rede não pode virar um login
   // aceito, e nenhuma senha trafega ou é guardada fora do Supabase.
-  const login = async (email: string, password: string): Promise<boolean> => {
-    if (!supabase) return false;
+  const login = async (email: string, password: string): Promise<AuthResult> => {
+    if (!supabase) {
+      return { ok: false, error: 'Autenticação indisponível: o servidor não está configurado.' };
+    }
 
     const { data, error } = await supabase.auth.signInWithPassword({ email, password });
-    if (error || !data.session) return false;
+    if (error) return { ok: false, error: traduzirErroAuth(error.message) };
+    if (!data.session) {
+      return { ok: false, error: 'Não foi possível iniciar a sessão. Tente novamente.' };
+    }
 
     // Login real encerra o modo demonstração.
     localStorage.removeItem(GUEST_FLAG_KEY);
@@ -319,7 +354,25 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
     };
     setCurrentUser(loggedUser);
     localStorage.setItem('pokefan_active_user', JSON.stringify(loggedUser));
-    return true;
+    return { ok: true };
+  };
+
+  /**
+   * OAuth com Google. Redireciona para fora da página; a sessão volta pela
+   * URL e é capturada pelo onAuthStateChange, que cuida de popular o usuário.
+   * Requer o provedor Google habilitado no painel do Supabase.
+   */
+  const loginWithGoogle = async (): Promise<AuthResult> => {
+    if (!supabase) {
+      return { ok: false, error: 'Autenticação indisponível: o servidor não está configurado.' };
+    }
+
+    const { error } = await supabase.auth.signInWithOAuth({
+      provider: 'google',
+      options: { redirectTo: window.location.origin }
+    });
+    if (error) return { ok: false, error: traduzirErroAuth(error.message) };
+    return { ok: true };
   };
 
   // Modo demonstração: entra sem credencial nenhuma e sem sessão no Supabase.
@@ -337,24 +390,40 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
     localStorage.setItem('pokefan_active_user', JSON.stringify(guestUser));
   };
 
-  const register = async (username: string, email: string, password: string, avatar: string): Promise<boolean> => {
-    if (!supabase) return false;
+  const register = async (username: string, email: string, password: string, avatar: string): Promise<AuthResult> => {
+    if (!supabase) {
+      return { ok: false, error: 'Cadastro indisponível: o servidor não está configurado.' };
+    }
 
     const { data, error } = await supabase.auth.signUp({
       email,
       password,
       options: {
-        data: {
-          username,
-          avatar
-        }
+        data: { username, avatar },
+        emailRedirectTo: window.location.origin
       }
     });
-    if (error || !data.user) return false;
+    if (error) return { ok: false, error: traduzirErroAuth(error.message) };
+    if (!data.user) {
+      return { ok: false, error: 'Não foi possível criar a conta. Tente novamente.' };
+    }
 
-    // TODO(T3): com confirmação de e-mail ligada, data.session vem nulo e a
-    // pessoa é marcada como logada sem sessão — toda gravação na nuvem vira
-    // no-op silencioso. Tratar o estado "confirme seu e-mail" antes disto.
+    // O Supabase não revela se um e-mail já existe (evita enumeração de
+    // usuários): em vez de erro, devolve um usuário com `identities` vazio.
+    // É o único sinal disponível para diferenciar cadastro novo de repetido.
+    if (data.user.identities && data.user.identities.length === 0) {
+      return { ok: false, error: 'Este e-mail já está cadastrado. Tente entrar.' };
+    }
+
+    // Sem sessão significa confirmação de e-mail pendente. NÃO marcar como
+    // logado aqui: sem sessão a RLS bloqueia tudo e cada gravação na nuvem
+    // viraria um no-op silencioso — era exatamente o bug que o T3 veio matar.
+    if (!data.session) {
+      return { ok: true, needsEmailConfirmation: true };
+    }
+
+    localStorage.removeItem(GUEST_FLAG_KEY);
+
     const newUser: User = {
       username,
       email,
@@ -363,7 +432,7 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
     };
     setCurrentUser(newUser);
     localStorage.setItem('pokefan_active_user', JSON.stringify(newUser));
-    return true;
+    return { ok: true };
   };
 
   const logout = () => {
@@ -548,6 +617,7 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
         selectedSetId,
         apiKey,
         login,
+        loginWithGoogle,
         loginAsGuest,
         register,
         logout,

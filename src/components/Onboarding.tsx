@@ -1,11 +1,22 @@
 import React, { useState } from 'react';
 import { useApp } from '../context/AppContext';
-import { Eye, EyeOff, UserPlus, LogIn, ChevronRight } from 'lucide-react';
+import { Eye, EyeOff, UserPlus, LogIn, ChevronRight, MailCheck } from 'lucide-react';
+
+/** Logotipo do Google. Lucide não traz ícones de marca. */
+const GoogleIcon: React.FC<{ size?: number }> = ({ size = 18 }) => (
+  <svg width={size} height={size} viewBox="0 0 48 48" aria-hidden="true">
+    <path fill="#4285F4" d="M45.1 24.5c0-1.6-.1-3.1-.4-4.5H24v8.5h11.8c-.5 2.7-2 5-4.4 6.6v5.5h7.1c4.1-3.8 6.6-9.4 6.6-16.1z" />
+    <path fill="#34A853" d="M24 46c5.9 0 10.9-2 14.5-5.4l-7.1-5.5c-2 1.3-4.5 2.1-7.4 2.1-5.7 0-10.5-3.8-12.2-9H4.5v5.7C8.1 41.1 15.500 46 24 46z" />
+    <path fill="#FBBC05" d="M11.8 28.2c-.4-1.3-.7-2.7-.7-4.2s.2-2.9.7-4.2v-5.7H4.5C3 17 2 20.4 2 24s1 7 2.5 9.9l7.3-5.7z" />
+    <path fill="#EA4335" d="M24 10.8c3.2 0 6.1 1.1 8.4 3.3l6.3-6.3C34.9 4.2 29.9 2 24 2 15.5 2 8.1 6.9 4.5 14.1l7.3 5.7c1.7-5.2 6.5-9 12.2-9z" />
+  </svg>
+);
 
 export const Onboarding: React.FC = () => {
-  const { login, loginAsGuest, register } = useApp();
-  const [screen, setScreen] = useState<'welcome' | 'login' | 'register'>('welcome');
-  
+  const { login, loginWithGoogle, loginAsGuest, register } = useApp();
+  const [screen, setScreen] = useState<'welcome' | 'login' | 'register' | 'confirm-email'>('welcome');
+  const [busy, setBusy] = useState(false);
+
   // Login States
   const [loginEmail, setLoginEmail] = useState('');
   const [loginPassword, setLoginPassword] = useState('');
@@ -16,6 +27,8 @@ export const Onboarding: React.FC = () => {
   const [regUsername, setRegUsername] = useState('');
   const [regEmail, setRegEmail] = useState('');
   const [regPassword, setRegPassword] = useState('');
+  const [regConfirmPassword, setRegConfirmPassword] = useState('');
+  const [showRegPassword, setShowRegPassword] = useState(false);
   const [regAvatar] = useState("data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='%239ca3af'><path d='M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm0 4c1.93 0 3.5 1.57 3.5 3.5S13.93 13 12 13s-3.5-1.57-3.5-3.5S10.07 6 12 6zm0 14c-2.03 0-4.43-.82-6.14-2.88C7.55 15.8 9.68 15 12 15s4.45.8 6.14 2.12C16.43 19.18 14.03 20 12 20z'/></svg>");
   const [regError, setRegError] = useState('');
 
@@ -23,6 +36,9 @@ export const Onboarding: React.FC = () => {
   // corrompe endereços como maria-silva@gmail.com e nomes como Jean-Pierre.
   // A proteção correta aqui é validar formato, não mutilar a entrada.
   const isValidEmail = (value: string) => /^[^\s@]+@[^\s@]+\.[^\s@]{2,}$/.test(value);
+
+  // Mínimo do Supabase. Subir aqui exige subir também no painel do projeto.
+  const MIN_PASSWORD_LENGTH = 6;
 
   const handleLogin = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -36,10 +52,11 @@ export const Onboarding: React.FC = () => {
       setLoginError('Digite um e-mail válido.');
       return;
     }
-    const result = login(cleanEmail, loginPassword);
-    const success = result instanceof Promise ? await result : result;
-    if (!success) {
-      setLoginError('E-mail ou senha incorretos.');
+    setBusy(true);
+    const result = await login(cleanEmail, loginPassword);
+    setBusy(false);
+    if (!result.ok) {
+      setLoginError(result.error || 'E-mail ou senha incorretos.');
     }
   };
 
@@ -48,18 +65,54 @@ export const Onboarding: React.FC = () => {
     setRegError('');
     const cleanUsername = regUsername.trim();
     const cleanEmail = regEmail.trim();
-    if (!cleanUsername || !cleanEmail || !regPassword) {
+
+    if (!cleanUsername || !cleanEmail || !regPassword || !regConfirmPassword) {
       setRegError('Por favor, preencha todos os campos.');
+      return;
+    }
+    if (cleanUsername.length < 2) {
+      setRegError('O nome do treinador precisa ter pelo menos 2 caracteres.');
       return;
     }
     if (!isValidEmail(cleanEmail)) {
       setRegError('Digite um e-mail válido.');
       return;
     }
-    const result = register(cleanUsername, cleanEmail, regPassword, regAvatar);
-    const success = result instanceof Promise ? await result : result;
-    if (!success) {
-      setRegError('Não foi possível criar a conta. Verifique os dados e tente novamente.');
+    if (regPassword.length < MIN_PASSWORD_LENGTH) {
+      setRegError(`A senha precisa ter pelo menos ${MIN_PASSWORD_LENGTH} caracteres.`);
+      return;
+    }
+    if (regPassword !== regConfirmPassword) {
+      setRegError('As senhas não são iguais.');
+      return;
+    }
+
+    setBusy(true);
+    const result = await register(cleanUsername, cleanEmail, regPassword, regAvatar);
+    setBusy(false);
+
+    if (!result.ok) {
+      setRegError(result.error || 'Não foi possível criar a conta.');
+      return;
+    }
+    // Conta criada sem sessão: o app NÃO entra. Sem sessão, nada é salvo na
+    // nuvem, e fingir um login logado era o bug que este fluxo veio corrigir.
+    if (result.needsEmailConfirmation) {
+      setScreen('confirm-email');
+    }
+  };
+
+  const handleGoogle = async () => {
+    setLoginError('');
+    setRegError('');
+    setBusy(true);
+    const result = await loginWithGoogle();
+    // Em caso de sucesso o navegador sai da página; só chegamos aqui se falhou.
+    setBusy(false);
+    if (!result.ok) {
+      const msg = result.error || 'Não foi possível entrar com o Google.';
+      setLoginError(msg);
+      setRegError(msg);
     }
   };
 
@@ -101,15 +154,36 @@ export const Onboarding: React.FC = () => {
             </div>
 
             <div className="glass-panel rounded-3xl p-6 shadow-ambient-lvl2 border border-white/40 space-y-4">
-              <button 
+              {loginError && (
+                <div className="p-3 text-xs bg-error-container text-on-error-container border border-error/20 rounded-xl">
+                  {loginError}
+                </div>
+              )}
+
+              <button
+                onClick={handleGoogle}
+                disabled={busy}
+                className="w-full bg-white hover:bg-surface-container-low border border-outline-variant/40 font-bold py-4 rounded-2xl transition-all active:scale-[0.98] flex items-center justify-center gap-2.5 text-on-surface shadow-sm disabled:opacity-60 disabled:cursor-not-allowed"
+              >
+                <GoogleIcon size={20} />
+                Continuar com Google
+              </button>
+
+              <div className="flex items-center gap-3" aria-hidden="true">
+                <span className="h-px flex-1 bg-outline-variant/40"></span>
+                <span className="text-[10px] font-bold text-on-surface-variant uppercase tracking-wider">ou</span>
+                <span className="h-px flex-1 bg-outline-variant/40"></span>
+              </div>
+
+              <button
                 onClick={() => setScreen('login')}
                 className="w-full font-bold py-4 rounded-2xl transition-all active:scale-[0.98] flex items-center justify-center gap-2 shadow-md bg-primary text-white hover:bg-primary-container"
               >
                 <LogIn size={20} />
-                Entrar com Conta
+                Entrar com E-mail
               </button>
-              
-              <button 
+
+              <button
                 onClick={() => setScreen('register')}
                 className="w-full bg-white hover:bg-surface-container-low border border-primary/20 font-bold py-4 rounded-2xl transition-all active:scale-[0.98] flex items-center justify-center gap-2 text-primary shadow-sm"
               >
@@ -117,7 +191,7 @@ export const Onboarding: React.FC = () => {
                 Criar Nova Conta
               </button>
 
-              <button 
+              <button
                 onClick={loginAsGuest}
                 className="w-full text-xs font-semibold text-on-surface-variant hover:text-primary transition-colors flex items-center justify-center gap-1 pt-1"
               >
@@ -182,13 +256,72 @@ export const Onboarding: React.FC = () => {
                 </div>
               </div>
 
-              <button 
+              <button
                 type="submit"
-                className="w-full font-bold py-4 rounded-xl transition-all active:scale-[0.98] flex items-center justify-center gap-2 shadow-md bg-primary text-white hover:bg-primary-container mt-6"
+                disabled={busy}
+                className="w-full font-bold py-4 rounded-xl transition-all active:scale-[0.98] flex items-center justify-center gap-2 shadow-md bg-primary text-white hover:bg-primary-container mt-6 disabled:opacity-60 disabled:cursor-not-allowed"
               >
-                ENTRAR
+                {busy ? 'ENTRANDO...' : 'ENTRAR'}
+              </button>
+
+              <div className="flex items-center gap-3 pt-1" aria-hidden="true">
+                <span className="h-px flex-1 bg-outline-variant/40"></span>
+                <span className="text-[10px] font-bold text-on-surface-variant uppercase tracking-wider">ou</span>
+                <span className="h-px flex-1 bg-outline-variant/40"></span>
+              </div>
+
+              <button
+                type="button"
+                onClick={handleGoogle}
+                disabled={busy}
+                className="w-full bg-white hover:bg-surface-container-low border border-outline-variant/40 font-bold py-3.5 rounded-xl transition-all active:scale-[0.98] flex items-center justify-center gap-2.5 text-on-surface shadow-sm disabled:opacity-60 disabled:cursor-not-allowed"
+              >
+                <GoogleIcon size={18} />
+                Continuar com Google
               </button>
             </form>
+          </div>
+        )}
+
+        {screen === 'confirm-email' && (
+          <div className="glass-panel rounded-3xl p-6 shadow-ambient-lvl2 border border-white/40 space-y-4 text-center animate-fade-in">
+            <div className="w-16 h-16 mx-auto rounded-full bg-primary/10 border border-primary/20 flex items-center justify-center">
+              <MailCheck size={30} className="text-primary" />
+            </div>
+
+            <h2 className="text-xl font-extrabold text-on-surface tracking-tight">
+              Confirme seu e-mail
+            </h2>
+
+            <p className="text-sm text-on-surface-variant leading-relaxed">
+              Enviamos um link de confirmação para{' '}
+              <span className="font-bold text-on-surface break-all">{regEmail.trim()}</span>.
+              Abra o link para ativar sua conta e depois entre aqui.
+            </p>
+
+            <p className="text-xs text-on-surface-variant bg-surface-container-low rounded-xl p-3 border border-outline-variant/30">
+              Sua coleção só é salva na nuvem depois da confirmação. Sem isso, os dados
+              ficam apenas neste dispositivo.
+            </p>
+
+            <button
+              onClick={() => {
+                setScreen('login');
+                setLoginEmail(regEmail.trim());
+                setRegPassword('');
+                setRegConfirmPassword('');
+              }}
+              className="w-full font-bold py-4 rounded-xl transition-all active:scale-[0.98] shadow-md bg-primary text-white hover:bg-primary-container"
+            >
+              JÁ CONFIRMEI, QUERO ENTRAR
+            </button>
+
+            <button
+              onClick={() => setScreen('welcome')}
+              className="w-full text-xs font-bold text-primary hover:underline pt-1"
+            >
+              Voltar ao início
+            </button>
           </div>
         )}
 
@@ -242,20 +375,65 @@ export const Onboarding: React.FC = () => {
                 <label className="block text-[11px] font-bold text-on-surface-variant uppercase tracking-wider mb-1">
                   Senha
                 </label>
-                <input 
-                  type="password"
-                  value={regPassword}
-                  onChange={(e) => setRegPassword(e.target.value)}
-                  placeholder="Escolha uma senha segura"
-                  className="w-full bg-surface-container-low border border-outline-variant/30 rounded-xl px-4 py-3 text-sm focus:outline-none focus:ring-2 focus:ring-tertiary focus:bg-white transition-all text-on-surface font-medium"
-                />
+                <div className="relative">
+                  <input
+                    type={showRegPassword ? 'text' : 'password'}
+                    value={regPassword}
+                    onChange={(e) => setRegPassword(e.target.value)}
+                    placeholder={`Pelo menos ${MIN_PASSWORD_LENGTH} caracteres`}
+                    autoComplete="new-password"
+                    className="w-full bg-surface-container-low border border-outline-variant/30 rounded-xl pl-4 pr-12 py-3 text-sm focus:outline-none focus:ring-2 focus:ring-tertiary focus:bg-white transition-all text-on-surface font-medium"
+                  />
+                  <button
+                    type="button"
+                    onClick={() => setShowRegPassword(!showRegPassword)}
+                    aria-label={showRegPassword ? 'Ocultar senha' : 'Mostrar senha'}
+                    className="absolute right-3 top-1/2 -translate-y-1/2 text-on-surface-variant hover:text-on-surface"
+                  >
+                    {showRegPassword ? <EyeOff size={18} /> : <Eye size={18} />}
+                  </button>
+                </div>
               </div>
 
-              <button 
+              <div>
+                <label className="block text-[11px] font-bold text-on-surface-variant uppercase tracking-wider mb-1">
+                  Confirmar Senha
+                </label>
+                <input
+                  type={showRegPassword ? 'text' : 'password'}
+                  value={regConfirmPassword}
+                  onChange={(e) => setRegConfirmPassword(e.target.value)}
+                  placeholder="Repita a senha"
+                  autoComplete="new-password"
+                  className="w-full bg-surface-container-low border border-outline-variant/30 rounded-xl px-4 py-3 text-sm focus:outline-none focus:ring-2 focus:ring-tertiary focus:bg-white transition-all text-on-surface font-medium"
+                />
+                {regConfirmPassword.length > 0 && regPassword !== regConfirmPassword && (
+                  <p className="mt-1.5 text-[11px] font-semibold text-error">As senhas não são iguais.</p>
+                )}
+              </div>
+
+              <button
                 type="submit"
-                className="w-full font-bold py-4 rounded-xl transition-all active:scale-[0.98] flex items-center justify-center gap-2 shadow-md bg-primary text-white hover:bg-primary-container mt-6"
+                disabled={busy}
+                className="w-full font-bold py-4 rounded-xl transition-all active:scale-[0.98] flex items-center justify-center gap-2 shadow-md bg-primary text-white hover:bg-primary-container mt-6 disabled:opacity-60 disabled:cursor-not-allowed"
               >
-                CRIAR MINHA CONTA
+                {busy ? 'CRIANDO...' : 'CRIAR MINHA CONTA'}
+              </button>
+
+              <div className="flex items-center gap-3 pt-1" aria-hidden="true">
+                <span className="h-px flex-1 bg-outline-variant/40"></span>
+                <span className="text-[10px] font-bold text-on-surface-variant uppercase tracking-wider">ou</span>
+                <span className="h-px flex-1 bg-outline-variant/40"></span>
+              </div>
+
+              <button
+                type="button"
+                onClick={handleGoogle}
+                disabled={busy}
+                className="w-full bg-white hover:bg-surface-container-low border border-outline-variant/40 font-bold py-3.5 rounded-xl transition-all active:scale-[0.98] flex items-center justify-center gap-2.5 text-on-surface shadow-sm disabled:opacity-60 disabled:cursor-not-allowed"
+              >
+                <GoogleIcon size={18} />
+                Continuar com Google
               </button>
             </form>
           </div>
