@@ -1,5 +1,12 @@
 # Templates de e-mail com a marca PokéFan
 
+> **BLOQUEADO no plano gratuito.** A personalização de templates exige plano Pro
+> — verificado no painel em 23/07/2026. Até a migração de plano, os e-mails saem
+> com o visual e o remetente padrão do provedor de autenticação.
+>
+> Os templates abaixo ficam prontos para o dia em que o plano mudar ou o SMTP
+> próprio for configurado. Nada aqui é acionável hoje.
+
 Cole cada bloco em **Supabase → Authentication → Email Templates**, na aba
 correspondente. São templates Go — as variáveis `{{ .ConfirmationURL }}` e
 `{{ .Email }}` são preenchidas pelo Supabase no envio.

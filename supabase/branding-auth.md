@@ -58,12 +58,15 @@ Duas camadas independentes:
 
 | O quê | Como | Custo |
 |---|---|---|
-| Visual do e-mail | `supabase/email-templates.md` | Grátis |
+| Visual do e-mail | `supabase/email-templates.md` | **Exige plano Pro** |
 | Remetente no seu domínio | `supabase/custom-smtp.md` | Domínio ~R$ 60/ano + provedor grátis |
 | Link dentro do e-mail no seu domínio | Add-on Custom Domain | US$ 10/mês |
 
-O visual pode ser trocado hoje. O remetente exige um domínio próprio — não dá
-para enviar a partir de um subdomínio `.vercel.app`, porque a zona DNS não é sua.
+Verificado em 23/07/2026: a personalização de templates **não está disponível no
+plano gratuito**. Ou seja, nenhuma das três camadas é grátis hoje. O e-mail
+continua com o visual e o remetente padrão até que haja plano Pro ou SMTP
+próprio — e o SMTP próprio exige um domínio, porque não é possível enviar a
+partir de um subdomínio `.vercel.app`, cuja zona DNS não é sua.
 
 **Motivo urgente e independente da marca:** o SMTP compartilhado do Supabase
 gratuito limita o envio a pouquíssimas mensagens por hora. Com alguns testadores
