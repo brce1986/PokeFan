@@ -1,10 +1,9 @@
 import React, { useState } from 'react';
 import { useApp } from '../context/AppContext';
 import { Eye, EyeOff, UserPlus, LogIn, ChevronRight } from 'lucide-react';
-import { sanitizeInput } from '../utils/security';
 
 export const Onboarding: React.FC = () => {
-  const { login, register } = useApp();
+  const { login, loginAsGuest, register } = useApp();
   const [screen, setScreen] = useState<'welcome' | 'login' | 'register'>('welcome');
   
   // Login States
@@ -20,34 +19,47 @@ export const Onboarding: React.FC = () => {
   const [regAvatar] = useState("data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='%239ca3af'><path d='M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm0 4c1.93 0 3.5 1.57 3.5 3.5S13.93 13 12 13s-3.5-1.57-3.5-3.5S10.07 6 12 6zm0 14c-2.03 0-4.43-.82-6.14-2.88C7.55 15.8 9.68 15 12 15s4.45.8 6.14 2.12C16.43 19.18 14.03 20 12 20z'/></svg>");
   const [regError, setRegError] = useState('');
 
+  // sanitizeInput NÃO se aplica a e-mail nem a nome: ele remove - e ' , o que
+  // corrompe endereços como maria-silva@gmail.com e nomes como Jean-Pierre.
+  // A proteção correta aqui é validar formato, não mutilar a entrada.
+  const isValidEmail = (value: string) => /^[^\s@]+@[^\s@]+\.[^\s@]{2,}$/.test(value);
+
   const handleLogin = async (e: React.FormEvent) => {
     e.preventDefault();
     setLoginError('');
-    const cleanEmail = sanitizeInput(loginEmail);
+    const cleanEmail = loginEmail.trim();
     if (!cleanEmail || !loginPassword) {
       setLoginError('Por favor, preencha todos os campos.');
+      return;
+    }
+    if (!isValidEmail(cleanEmail)) {
+      setLoginError('Digite um e-mail válido.');
       return;
     }
     const result = login(cleanEmail, loginPassword);
     const success = result instanceof Promise ? await result : result;
     if (!success) {
-      setLoginError('Credenciais inválidas. Para testar, use o e-mail: alex.trainer@pokevault.app e senha: 123456');
+      setLoginError('E-mail ou senha incorretos.');
     }
   };
 
   const handleRegister = async (e: React.FormEvent) => {
     e.preventDefault();
     setRegError('');
-    const cleanUsername = sanitizeInput(regUsername);
-    const cleanEmail = sanitizeInput(regEmail);
+    const cleanUsername = regUsername.trim();
+    const cleanEmail = regEmail.trim();
     if (!cleanUsername || !cleanEmail || !regPassword) {
       setRegError('Por favor, preencha todos os campos.');
+      return;
+    }
+    if (!isValidEmail(cleanEmail)) {
+      setRegError('Digite um e-mail válido.');
       return;
     }
     const result = register(cleanUsername, cleanEmail, regPassword, regAvatar);
     const success = result instanceof Promise ? await result : result;
     if (!success) {
-      setRegError('Este e-mail já está cadastrado.');
+      setRegError('Não foi possível criar a conta. Verifique os dados e tente novamente.');
     }
   };
 
@@ -106,10 +118,7 @@ export const Onboarding: React.FC = () => {
               </button>
 
               <button 
-                onClick={() => {
-                  // Entrar direto com mock account
-                  login('alex.trainer@pokevault.app', '123456');
-                }}
+                onClick={loginAsGuest}
                 className="w-full text-xs font-semibold text-on-surface-variant hover:text-primary transition-colors flex items-center justify-center gap-1 pt-1"
               >
                 Acesso Rápido de Teste (Trainer Alex)
@@ -146,7 +155,7 @@ export const Onboarding: React.FC = () => {
                   type="email"
                   value={loginEmail}
                   onChange={(e) => setLoginEmail(e.target.value)}
-                  placeholder="ex: alex.trainer@pokevault.app"
+                  placeholder="voce@email.com"
                   className="w-full bg-surface-container-low border border-outline-variant/30 rounded-xl px-4 py-3 text-sm focus:outline-none focus:ring-2 focus:ring-tertiary focus:bg-white transition-all text-on-surface font-medium"
                 />
               </div>

@@ -45,6 +45,7 @@ interface AppContextType {
   selectedSetId: string | null;
   apiKey: string;
   login: (email: string, password: string) => boolean | Promise<boolean>;
+  loginAsGuest: () => void;
   register: (username: string, email: string, password: string, avatar: string) => boolean | Promise<boolean>;
   logout: () => void;
   updateProfile: (username: string, avatar: string) => void;
@@ -84,6 +85,10 @@ const CURRENCY_SYMBOLS: Record<CurrencyType, string> = {
   BRL: 'R$'
 };
 
+// Marca o modo demonstração, que não tem sessão no Supabase e por isso
+// precisa sobreviver ao onAuthStateChange disparado com sessão nula.
+const GUEST_FLAG_KEY = 'pokefan_guest_mode';
+
 const DEFAULT_AVATARS = [
   "data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='%239ca3af'><path d='M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm0 4c1.93 0 3.5 1.57 3.5 3.5S13.93 13 12 13s-3.5-1.57-3.5-3.5S10.07 6 12 6zm0 14c-2.03 0-4.43-.82-6.14-2.88C7.55 15.8 9.68 15 12 15s4.45.8 6.14 2.12C16.43 19.18 14.03 20 12 20z'/></svg>"
 ];
@@ -113,51 +118,25 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
     const storedNotifications = localStorage.getItem('pokefan_notifications');
     const storedApiKey = localStorage.getItem('pokefan_api_key');
 
+    // Limpeza única: versões anteriores guardavam contas com senha em texto
+    // puro nesta chave. O fallback de autenticação local foi removido, mas o
+    // dado permanece no dispositivo de quem já usou o app — apagar na abertura.
+    localStorage.removeItem('pokefan_accounts');
+
     if (storedUsers) setUsersList(JSON.parse(storedUsers));
     if (storedActiveUser) setCurrentUser(JSON.parse(storedActiveUser));
     if (storedCurrency) setCurrencyState(storedCurrency as CurrencyType);
     if (storedNotifications) setNotificationsState(JSON.parse(storedNotifications));
     if (storedApiKey) setApiKeyState(storedApiKey);
 
-    // Se Supabase estiver ativado, obter sessão de auth ativa
-    if (supabase) {
-      supabase.auth.getSession().then(({ data: { session } }) => {
-        if (session?.user) {
-          const sUser: User = {
-            username: session.user.user_metadata.username || session.user.email?.split('@')[0] || 'Treinador',
-            email: session.user.email || '',
-            avatar: session.user.user_metadata.avatar || DEFAULT_AVATARS[0],
-            collectorRank: 'Mestre da Nuvem'
-          };
-          setCurrentUser(sUser);
-          localStorage.setItem('pokefan_active_user', JSON.stringify(sUser));
-        }
-      });
-
-      const { data: { subscription } } = supabase.auth.onAuthStateChange((_event, session) => {
-        if (session?.user) {
-          const sUser: User = {
-            username: session.user.user_metadata.username || session.user.email?.split('@')[0] || 'Treinador',
-            email: session.user.email || '',
-            avatar: session.user.user_metadata.avatar || DEFAULT_AVATARS[0],
-            collectorRank: 'Mestre da Nuvem'
-          };
-          setCurrentUser(sUser);
-          localStorage.setItem('pokefan_active_user', JSON.stringify(sUser));
-        } else {
-          setCurrentUser(null);
-          localStorage.removeItem('pokefan_active_user');
-        }
-      });
-
-      return () => subscription.unsubscribe();
-    }
-
-    // Inicializar coleção com mock se estiver vazia
+    // Coleção e wishlist locais precisam ser carregadas ANTES de qualquer
+    // early return. O bloco do Supabase abaixo retornava primeiro, então em
+    // produção nada disto rodava e a coleção sumia a cada recarga de página.
     if (storedCollection) {
       setCollection(JSON.parse(storedCollection));
-    } else {
-      // Pré-popular coleção com itens interessantes para o painel inicial
+    } else if (!supabase) {
+      // Coleção de demonstração só em ambiente sem Supabase (dev/teste local).
+      // Usuário real nunca recebe carta que não adicionou.
       const initialCollection: CollectionItem[] = [
         {
           id: "swsh9-182-NM-holo",
@@ -194,6 +173,43 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
     const storedWishlist = localStorage.getItem('pokefan_wishlist');
     if (storedWishlist) {
       setWishlist(JSON.parse(storedWishlist));
+    }
+
+    // Se Supabase estiver ativado, obter sessão de auth ativa
+    if (supabase) {
+      supabase.auth.getSession().then(({ data: { session } }) => {
+        if (session?.user) {
+          const sUser: User = {
+            username: session.user.user_metadata.username || session.user.email?.split('@')[0] || 'Treinador',
+            email: session.user.email || '',
+            avatar: session.user.user_metadata.avatar || DEFAULT_AVATARS[0],
+            collectorRank: 'Mestre da Nuvem'
+          };
+          setCurrentUser(sUser);
+          localStorage.setItem('pokefan_active_user', JSON.stringify(sUser));
+        }
+      });
+
+      const { data: { subscription } } = supabase.auth.onAuthStateChange((_event, session) => {
+        if (session?.user) {
+          const sUser: User = {
+            username: session.user.user_metadata.username || session.user.email?.split('@')[0] || 'Treinador',
+            email: session.user.email || '',
+            avatar: session.user.user_metadata.avatar || DEFAULT_AVATARS[0],
+            collectorRank: 'Mestre da Nuvem'
+          };
+          setCurrentUser(sUser);
+          localStorage.setItem('pokefan_active_user', JSON.stringify(sUser));
+        } else if (localStorage.getItem(GUEST_FLAG_KEY) !== 'true') {
+          // Sessão nula derruba o usuário — exceto no modo demonstração, que
+          // por definição não tem sessão no Supabase. Sem esta guarda, o
+          // "Acesso Rápido de Teste" logava e deslogava no mesmo instante.
+          setCurrentUser(null);
+          localStorage.removeItem('pokefan_active_user');
+        }
+      });
+
+      return () => subscription.unsubscribe();
     }
   }, []);
 
@@ -283,118 +299,67 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
     }
   };
 
-  // Funções de Autenticação (Local + Supabase)
+  // Autenticação — Supabase é a única fonte de verdade.
+  // Não existe fallback local: uma falha de rede não pode virar um login
+  // aceito, e nenhuma senha trafega ou é guardada fora do Supabase.
   const login = async (email: string, password: string): Promise<boolean> => {
-    if (supabase) {
-      try {
-        const { data, error } = await supabase.auth.signInWithPassword({ email, password });
-        if (!error && data.user) {
-          const loggedUser: User = {
-            username: data.user.user_metadata.username || email.split('@')[0],
-            email: data.user.email || '',
-            avatar: data.user.user_metadata.avatar || DEFAULT_AVATARS[0],
-            collectorRank: "Mestre da Nuvem"
-          };
-          setCurrentUser(loggedUser);
-          localStorage.setItem('pokefan_active_user', JSON.stringify(loggedUser));
-          return true;
-        }
-      } catch (err) {
-        console.error('Supabase Auth falhou, tentando local:', err);
-      }
-    }
+    if (!supabase) return false;
 
-    // Simulação simples com localStorage
-    const storedUsersJson = localStorage.getItem('pokefan_accounts') || '[]';
-    const accounts = JSON.parse(storedUsersJson);
-    
-    // Conta padrão se não houver nenhuma
-    if (accounts.length === 0 && email === 'alex.trainer@pokevault.app' && password === '123456') {
-      const defaultUser: User = {
-        username: "Trainer Alex",
-        email: "alex.trainer@pokevault.app",
-        avatar: DEFAULT_AVATARS[0],
-        collectorRank: "Treinador Mestre"
-      };
-      setCurrentUser(defaultUser);
-      localStorage.setItem('pokefan_active_user', JSON.stringify(defaultUser));
-      return true;
-    }
+    const { data, error } = await supabase.auth.signInWithPassword({ email, password });
+    if (error || !data.session) return false;
 
-    const found = accounts.find((acc: any) => acc.email === email && acc.password === password);
-    if (found) {
-      const loggedUser: User = {
-        username: found.username,
-        email: found.email,
-        avatar: found.avatar || DEFAULT_AVATARS[0],
-        collectorRank: "Colecionador Novato"
-      };
-      setCurrentUser(loggedUser);
-      localStorage.setItem('pokefan_active_user', JSON.stringify(loggedUser));
-      return true;
-    }
-    
-    // Fallback para facilitar testes rápidos com a conta padrão
-    if (email === 'alex.trainer@pokevault.app' || email === 'admin@admin.com') {
-      const devUser: User = {
-        username: "Trainer Alex",
-        email: email,
-        avatar: DEFAULT_AVATARS[0],
-        collectorRank: "Treinador Master"
-      };
-      setCurrentUser(devUser);
-      localStorage.setItem('pokefan_active_user', JSON.stringify(devUser));
-      return true;
-    }
+    // Login real encerra o modo demonstração.
+    localStorage.removeItem(GUEST_FLAG_KEY);
 
-    return false;
+    const loggedUser: User = {
+      username: data.user?.user_metadata.username || email.split('@')[0],
+      email: data.user?.email || '',
+      avatar: data.user?.user_metadata.avatar || DEFAULT_AVATARS[0],
+      collectorRank: "Mestre da Nuvem"
+    };
+    setCurrentUser(loggedUser);
+    localStorage.setItem('pokefan_active_user', JSON.stringify(loggedUser));
+    return true;
+  };
+
+  // Modo demonstração: entra sem credencial nenhuma e sem sessão no Supabase.
+  // Por não ter sessão, a RLS impede qualquer leitura ou gravação na nuvem —
+  // o convidado só enxerga o próprio localStorage.
+  const loginAsGuest = () => {
+    const guestUser: User = {
+      username: "Trainer Alex",
+      email: "convidado@local",
+      avatar: DEFAULT_AVATARS[0],
+      collectorRank: "Modo Demonstração"
+    };
+    setCurrentUser(guestUser);
+    localStorage.setItem(GUEST_FLAG_KEY, 'true');
+    localStorage.setItem('pokefan_active_user', JSON.stringify(guestUser));
   };
 
   const register = async (username: string, email: string, password: string, avatar: string): Promise<boolean> => {
-    if (supabase) {
-      try {
-        const { data, error } = await supabase.auth.signUp({
-          email,
-          password,
-          options: {
-            data: {
-              username,
-              avatar
-            }
-          }
-        });
-        if (!error && data.user) {
-          const newUser: User = {
-            username,
-            email,
-            avatar: avatar || DEFAULT_AVATARS[0],
-            collectorRank: "Treinador da Nuvem"
-          };
-          setCurrentUser(newUser);
-          localStorage.setItem('pokefan_active_user', JSON.stringify(newUser));
-          return true;
+    if (!supabase) return false;
+
+    const { data, error } = await supabase.auth.signUp({
+      email,
+      password,
+      options: {
+        data: {
+          username,
+          avatar
         }
-      } catch (err) {
-        console.error('Supabase Register falhou, tentando local:', err);
       }
-    }
+    });
+    if (error || !data.user) return false;
 
-    const storedUsersJson = localStorage.getItem('pokefan_accounts') || '[]';
-    const accounts = JSON.parse(storedUsersJson);
-
-    if (accounts.some((acc: any) => acc.email === email)) {
-      return false; // Email já existe
-    }
-
-    const newAccount = { username, email, password, avatar };
-    accounts.push(newAccount);
-    localStorage.setItem('pokefan_accounts', JSON.stringify(accounts));
-
+    // TODO(T3): com confirmação de e-mail ligada, data.session vem nulo e a
+    // pessoa é marcada como logada sem sessão — toda gravação na nuvem vira
+    // no-op silencioso. Tratar o estado "confirme seu e-mail" antes disto.
     const newUser: User = {
       username,
       email,
       avatar: avatar || DEFAULT_AVATARS[0],
-      collectorRank: "Iniciante Pokédex"
+      collectorRank: "Treinador da Nuvem"
     };
     setCurrentUser(newUser);
     localStorage.setItem('pokefan_active_user', JSON.stringify(newUser));
@@ -406,6 +371,7 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
       supabase.auth.signOut().catch(err => console.error(err));
     }
     setCurrentUser(null);
+    localStorage.removeItem(GUEST_FLAG_KEY);
     localStorage.removeItem('pokefan_active_user');
     setActiveTabState('dashboard');
   };
@@ -415,16 +381,9 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
     const updated = { ...currentUser, username, avatar };
     setCurrentUser(updated);
     localStorage.setItem('pokefan_active_user', JSON.stringify(updated));
-
-    // Atualizar no cadastro geral também
-    const storedUsersJson = localStorage.getItem('pokefan_accounts') || '[]';
-    const accounts = JSON.parse(storedUsersJson);
-    const index = accounts.findIndex((acc: any) => acc.email === currentUser.email);
-    if (index !== -1) {
-      accounts[index].username = username;
-      accounts[index].avatar = avatar;
-      localStorage.setItem('pokefan_accounts', JSON.stringify(accounts));
-    }
+    // O cadastro local em 'pokefan_accounts' foi removido junto com o fallback
+    // de autenticação — não há mais registro paralelo para manter em dia.
+    // TODO(T14): persistir nome e avatar na tabela public.profiles.
   };
 
   // Coleção - Adicionar Carta
@@ -589,6 +548,7 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
         selectedSetId,
         apiKey,
         login,
+        loginAsGuest,
         register,
         logout,
         updateProfile,
