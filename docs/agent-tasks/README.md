@@ -12,6 +12,15 @@ verificar.
 3. Você me aciona: "tarefa X feita".
 4. Eu verifico contra os critérios de aceite e reporto o que estiver errado.
 
+## O agente é LITERAL
+
+O Gemini executa exatamente o que está escrito e **não busca nada além**. Ele
+não infere, não caça inconsistências, não "melhora" o que não foi pedido. Por
+isso cada brief enumera item a item o que fazer — critérios genéricos do tipo
+"corrija tudo que estiver errado" não funcionam; ele ignora o que não estiver
+listado explicitamente. Ao escrever um brief novo, liste cada mudança com
+arquivo e localização.
+
 ## Regras que valem para TODA tarefa (repetidas em cada brief)
 
 - Comentários e textos de UI em **português do Brasil**, igual ao resto do repo.
