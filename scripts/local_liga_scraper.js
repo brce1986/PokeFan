@@ -1,69 +1,71 @@
 import { chromium } from 'playwright';
 import fs from 'fs';
-import { createClient } from '@supabase/supabase-js';
 import dotenv from 'dotenv';
 
 dotenv.config();
 
-const supabaseUrl = process.env.SUPABASE_URL;
-const supabaseServiceRoleKey = process.env.SUPABASE_SERVICE_ROLE_KEY;
-
-// Inicializa o cliente do Supabase para ler as cartas da coleção
-const supabase = (supabaseUrl && supabaseServiceRoleKey) 
-  ? createClient(supabaseUrl, supabaseServiceRoleKey) 
-  : null;
+// Parâmetros opcionais de linha de comando:
+// Ex: node scripts/local_liga_scraper.js --limit 500 --set "Forças Temporais"
+const args = process.argv.slice(2);
+const limitArgIdx = args.indexOf('--limit');
+const limit = limitArgIdx !== -1 ? parseInt(args[limitArgIdx + 1]) : null;
+const setArgIdx = args.indexOf('--set');
+const filterSet = setArgIdx !== -1 ? args[setArgIdx + 1] : null;
 
 async function scrape() {
-  console.log("Iniciando scraper local da LigaPokémon...");
+  console.log("Iniciando scraper local da LigaPokémon com Catálogo Completo...");
 
-  let cardsToScrape = [];
+  // 1. Carregar catálogo completo gerado
+  const catalogPath = 'all_cards_catalog.json';
+  if (!fs.existsSync(catalogPath)) {
+    console.error("Erro: Arquivo 'all_cards_catalog.json' não encontrado na raiz do projeto.");
+    console.error("Por favor, execute primeiro: node scripts/generate_card_catalog.js");
+    process.exit(1);
+  }
 
-  // 1. Tentar ler as cartas reais cadastradas na coleção dos usuários no Supabase
-  if (supabase) {
-    console.log("Buscando cartas ativas nas coleções do Supabase para raspar...");
+  const catalog = JSON.parse(fs.readFileSync(catalogPath, 'utf8'));
+  let cardsToScrape = catalog;
+
+  // Filtrar por set se solicitado via argumento
+  if (filterSet) {
+    console.log(`Filtrando busca para o conjunto: "${filterSet}"`);
+    cardsToScrape = cardsToScrape.filter(c => c.setName.toLowerCase().includes(filterSet.toLowerCase()));
+  }
+
+  // 2. Carregar progresso anterior para permitir retomar (resume) de onde parou
+  let pricesOutput = {};
+  const progressPath = 'liga_prices.json';
+  if (fs.existsSync(progressPath)) {
     try {
-      const { data, error } = await supabase
-        .from('collection_items')
-        .select('card_id, card_details');
-
-      if (!error && data) {
-        const seen = new Set();
-        for (const item of data) {
-          if (!seen.has(item.card_id)) {
-            seen.add(item.card_id);
-            cardsToScrape.push({
-              id: item.card_id,
-              name: item.card_details.name,
-              number: item.card_details.number
-            });
-          }
-        }
-      }
+      pricesOutput = JSON.parse(fs.readFileSync(progressPath, 'utf8'));
+      console.log(`Retomando progresso! Carregados ${Object.keys(pricesOutput).length} registros anteriores de '${progressPath}'`);
     } catch (e) {
-      console.warn("Não foi possível carregar cartas do banco, usando fallback local.", e);
+      console.log("Criando novo arquivo de progresso.");
     }
   }
 
-  // Fallback para teste se o banco estiver vazio ou offline
-  if (cardsToScrape.length === 0) {
-    console.log("Usando lista de cartas padrão de demonstração para o scrape...");
-    cardsToScrape = [
-      { id: "sv3pt5-6", name: "Charizard ex", number: "6" },
-      { id: "swsh9-182", name: "Galarian Zapdos V", number: "182" },
-      { id: "sv5-1", name: "Turtwig", number: "1" }
-    ];
+  // Filtrar cartas que já foram raspadas
+  cardsToScrape = cardsToScrape.filter(c => !pricesOutput[c.id]);
+  console.log(`Restam ${cardsToScrape.length} cartas a raspar.`);
+
+  // Aplicar limite de busca por lote se especificado
+  if (limit && cardsToScrape.length > limit) {
+    console.log(`Limitando este lote para raspar apenas ${limit} cartas.`);
+    cardsToScrape = cardsToScrape.slice(0, limit);
   }
 
-  console.log(`Total de cartas a consultar: ${cardsToScrape.length}`);
+  if (cardsToScrape.length === 0) {
+    console.log("Nenhuma carta pendente para raspar. Tudo atualizado!");
+    return;
+  }
 
-  // Abre o navegador localmente no modo visível (headless: false)
-  // Isso reduz em 95% o risco de bloqueios do Cloudflare na sua rede doméstica
+  // Abre navegador visível (headless: false) para evitar bloqueios Cloudflare de rede doméstica
   const browser = await chromium.launch({ headless: false });
   const page = await browser.newPage();
-  const pricesOutput = {};
+  let batchCount = 0;
 
   for (const card of cardsToScrape) {
-    console.log(`\n🔍 Buscando LigaPokémon para: ${card.name} (#${card.number})...`);
+    console.log(`\n🔍 [Set: ${card.setName}] Raspando: ${card.name} (#${card.number})...`);
     
     try {
       const searchQuery = encodeURIComponent(`${card.name} ${card.number}`);
@@ -72,21 +74,19 @@ async function scrape() {
         timeout: 30000 
       });
 
-      // Simular comportamento humano
-      await page.waitForTimeout(2000);
+      // Simular intervalo humano
+      await page.waitForTimeout(1500);
 
-      // Se a busca retornar uma lista, clica no primeiro card correspondente
+      // Clica no primeiro card se vier lista de resultados
       const firstResultLink = page.locator('a[href*="view=cards/card&id="]').first();
       if (await firstResultLink.count() > 0) {
         await firstResultLink.click();
         await page.waitForLoadState('networkidle');
-        await page.waitForTimeout(2000);
+        await page.waitForTimeout(1500);
       }
 
-      // Extrai os textos do corpo da página para análise via regex (robusto contra alterações de classes HTML)
       const bodyText = await page.innerText('body');
 
-      // Encontrar strings como: "Menor: R$ 12,34", "Média: R$ 15,00", "Maior: R$ 20,00"
       const minMatch = bodyText.match(/(?:Menor|Mínimo|Menor Preço):\s*R\$\s*([\d.,]+)/i);
       const avgMatch = bodyText.match(/(?:Média|Médio|Preço Médio|Media):\s*R\$\s*([\d.,]+)/i);
       const maxMatch = bodyText.match(/(?:Maior|Máximo|Maior Preço):\s*R\$\s*([\d.,]+)/i);
@@ -95,7 +95,7 @@ async function scrape() {
       let priceAvg = avgMatch ? parseFloat(avgMatch[1].replace(/\./g, '').replace(',', '.')) : 0;
       let priceMax = maxMatch ? parseFloat(maxMatch[1].replace(/\./g, '').replace(',', '.')) : 0;
 
-      // Fallback: se não achar texto estruturado, tenta pegar os valores das ofertas ativas na tabela
+      // Fallback: busca na tabela de ofertas ativas
       if (priceAvg === 0) {
         const offerTexts = await page.locator('.preco-produto, .vlr-venda, td:has-text("R$")').allInnerTexts();
         const cleanPrices = offerTexts
@@ -110,24 +110,33 @@ async function scrape() {
       }
 
       if (priceAvg > 0) {
-        console.log(`➔ Preços extraídos: Mín R$ ${priceMin} | Média R$ ${priceAvg} | Máx R$ ${priceMax}`);
+        console.log(`➔ Sucesso! R$ ${priceAvg}`);
         pricesOutput[card.id] = {
           min: priceMin || priceAvg * 0.85,
           avg: priceAvg,
           max: priceMax || priceAvg * 1.15
         };
       } else {
-        console.log(`⚠ Não foi possível obter valores para esta carta.`);
+        console.log(`⚠ Preço indisponível.`);
       }
 
     } catch (err) {
-      console.error(`❌ Erro ao raspar ${card.name}:`, err);
+      console.error(`❌ Erro ao processar ${card.name}:`, err);
     }
+
+    // Salvar progresso a cada 10 cartas para não perder nada se você fechar o script
+    batchCount++;
+    if (batchCount % 10 === 0) {
+      fs.writeFileSync(progressPath, JSON.stringify(pricesOutput, null, 2));
+      console.log(`💾 Progresso salvo temporariamente (${Object.keys(pricesOutput).length} registros).`);
+    }
+
+    await new Promise(resolve => setTimeout(resolve, 1000));
   }
 
-  // Salvar no arquivo JSON local na raiz do projeto
-  fs.writeFileSync('liga_prices.json', JSON.stringify(pricesOutput, null, 2));
-  console.log("\n✅ Scraping concluído! Arquivo 'liga_prices.json' gerado com sucesso na raiz do projeto.");
+  // Grava o arquivo de progresso final
+  fs.writeFileSync(progressPath, JSON.stringify(pricesOutput, null, 2));
+  console.log(`\n✅ Scraping concluído! Progresso total salvo em '${progressPath}'.`);
   
   await browser.close();
 }
