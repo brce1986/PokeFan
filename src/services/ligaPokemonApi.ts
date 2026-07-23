@@ -1,5 +1,7 @@
 import type { TCGCard } from './pokemonApi';
 import { supabase } from './supabaseClient';
+import { precoUSD } from '../utils/pricing';
+import { getUsdToBrl } from './fxRates';
 
 export interface LigaPokemonPrice {
   priceMin: number;
@@ -36,7 +38,7 @@ export const ligaPokemonApi = {
    * 2. Se não estiver no cache (ou expirar), consulta a tabela centralizada no Supabase.
    * 3. Se não houver no banco ou estiver sem internet, estima convertendo o dólar do TCGplayer.
    */
-  async getCardPrice(card: TCGCard, forceRefresh = false): Promise<LigaPokemonPrice> {
+  async getCardPrice(card: TCGCard, forceRefresh = false): Promise<LigaPokemonPrice | null> {
     const cache = getCache();
     const cacheKey = card.id;
 
@@ -78,15 +80,19 @@ export const ligaPokemonApi = {
       }
     }
 
-    // 3. FALLBACK ESTIMADO (BRL baseada em TCGplayer USD)
-    const usdPrice = card.tcgplayer?.prices?.holofoil?.market || 
-                     card.tcgplayer?.prices?.normal?.market || 
-                     card.tcgplayer?.prices?.reverseHolofoil?.market || 
-                     5.00;
+    // 3. FALLBACK ESTIMADO (BRL a partir do USD do TCGplayer)
+    const usdPrice = precoUSD(card);
 
-    // Taxa de conversão estimada em BRL considerando frete e ágio de mercado
-    const conversionFactor = 6.2;
-    const estimatedAvg = usdPrice * conversionFactor;
+    // Sem base em dólar não há o que estimar. Devolver um número inventado aqui
+    // era a origem de preços fantasma (ex.: "R$ 31,00") para cartas sem preço.
+    if (usdPrice === null) return null;
+
+    // Câmbio real (cacheado 24h) no lugar do antigo fator 6.2 hardcoded, que
+    // envelhecia sozinho. O ágio de mercado da Liga (frete, importação) fica
+    // separado e explícito, em vez de embutido no câmbio.
+    const usdToBrl = await getUsdToBrl();
+    const AGIO_MERCADO_LIGA = 1.10;
+    const estimatedAvg = usdPrice * usdToBrl * AGIO_MERCADO_LIGA;
 
     const estimatedPrice: LigaPokemonPrice = {
       priceMin: estimatedAvg * 0.85,
