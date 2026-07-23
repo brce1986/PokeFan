@@ -1,6 +1,6 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { useApp } from '../context/AppContext';
-import { MOCK_SETS } from '../services/pokemonApi';
+import { pokemonApi, type TCGSet } from '../services/pokemonApi';
 import { precoUSD, somarValorColecao, SEM_PRECO } from '../utils/pricing';
 import { Scan, Search, TrendingUp, ChevronRight, BookOpen, Sparkles, Award, Heart } from 'lucide-react';
 
@@ -16,6 +16,12 @@ export const Dashboard: React.FC = () => {
 
   const [timeframe, setTimeframe] = useState<'7d' | '30d' | 'all'>('7d');
   const [isDropdownOpen, setIsDropdownOpen] = useState(false);
+
+  // Sets reais (card_sets no Supabase; cai para mock até a tabela existir).
+  const [sets, setSets] = useState<TCGSet[]>([]);
+  useEffect(() => {
+    pokemonApi.getSets().then(setSets).catch(() => setSets([]));
+  }, []);
 
   // Ref e estado para largura dinâmica do gráfico
   const chartContainerRef = useRef<HTMLDivElement>(null);
@@ -94,15 +100,24 @@ export const Dashboard: React.FC = () => {
 
   // Calcular progresso por set
   const getSetProgress = (setId: string, printedTotal: number) => {
-    // Apenas cartas únicas do set pertencentes à coleção
-    const uniqueCardsInSet = collection.filter(item => item.cardDetails.id.startsWith(setId));
-    const uniqueCount = uniqueCardsInSet.length;
-    const percentage = printedTotal > 0 ? Math.round((uniqueCount / printedTotal) * 100) : 0;
-    return {
-      percentage,
-      count: uniqueCount
-    };
+    // Cartas únicas do set na coleção. O prefixo precisa do hífen: sem ele, uma
+    // carta de "sv3pt5" (151) contaria como se fosse de "sv3" (Obsidian Flames).
+    const uniqueCount = collection.filter(item => item.cardDetails.id.startsWith(setId + '-')).length;
+    const percentage = printedTotal > 0 ? Math.min(100, Math.round((uniqueCount / printedTotal) * 100)) : 0;
+    return { percentage, count: uniqueCount };
   };
+
+  // No painel, mostrar os sets em que o usuário REALMENTE tem cartas (o
+  // progresso dele), do mais completo ao menos. Coleção vazia -> alguns sets
+  // recentes, para descoberta. Nunca as 174 barras de uma vez.
+  const setsComProgresso = sets
+    .map(set => ({ set, ...getSetProgress(set.id, set.printedTotal) }))
+    .filter(s => s.count > 0)
+    .sort((a, b) => b.count - a.count);
+
+  const setsParaExibir = setsComProgresso.length > 0
+    ? setsComProgresso.slice(0, 6)
+    : sets.slice(0, 4).map(set => ({ set, ...getSetProgress(set.id, set.printedTotal) }));
 
   return (
     <div className="space-y-6 pb-6 animate-fade-in">
@@ -397,11 +412,9 @@ export const Dashboard: React.FC = () => {
         </div>
         
         <div className="space-y-3">
-          {MOCK_SETS.map((set) => {
-            const { percentage, count } = getSetProgress(set.id, set.printedTotal);
-            
+          {setsParaExibir.map(({ set, percentage, count }) => {
             return (
-              <div 
+              <div
                 key={set.id}
                 onClick={() => {
                   setSelectedSetId(set.id);
@@ -410,11 +423,11 @@ export const Dashboard: React.FC = () => {
                 className="bg-surface-container-lowest rounded-2xl p-4 shadow-ambient-lvl1 border border-outline-variant/10 flex items-center gap-4 cursor-pointer hover:bg-surface-container-low hover:border-primary/10 transition-all active:scale-[0.99]"
               >
                 <div className="w-14 h-10 bg-white rounded-lg flex items-center justify-center border border-outline-variant/20 overflow-hidden p-1 flex-shrink-0 shadow-sm">
-                  <img 
-                    className="w-full h-full object-contain"
-                    src={set.images.logo} 
-                    alt={set.name}
-                  />
+                  {set.images.logo ? (
+                    <img className="w-full h-full object-contain" src={set.images.logo} alt={set.name} />
+                  ) : (
+                    <span className="text-[9px] font-bold text-on-surface-variant text-center leading-tight px-0.5">{set.name}</span>
+                  )}
                 </div>
                 
                 <div className="flex-grow min-w-0">

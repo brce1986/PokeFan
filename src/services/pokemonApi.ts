@@ -84,6 +84,14 @@ const fetchFromAPI = async (endpoint: string) => {
 export const pokemonApi = {
   // Obter todos os conjuntos (Sets)
   getSets: async (): Promise<TCGSet[]> => {
+    // 1ª opção: tabela card_sets no Supabase (todos os ~174 sets, com logos).
+    try {
+      const doCatalogo = await catalogApi.getSets();
+      if (doCatalogo.length > 0) return doCatalogo;
+    } catch (error) {
+      console.warn("Sets do catálogo local falharam, tentando API", error);
+    }
+
     try {
       const result = await fetchFromAPI('/sets?orderBy=-releaseDate');
       return result.data;

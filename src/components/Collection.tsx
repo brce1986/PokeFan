@@ -45,10 +45,12 @@ export const Collection: React.FC = () => {
       try {
         const data = await pokemonApi.getSets();
         setSetsList(data);
-        setUsingFallbackSets(false);
+        // getSets nunca lança: quando catálogo e API falham, devolve a própria
+        // referência de MOCK_SETS. Comparar por referência é o jeito exato de
+        // saber que estamos nos 4 sets mockados e avisar o usuário.
+        setUsingFallbackSets(data === MOCK_SETS);
       } catch (err) {
         console.error(err);
-        // API pública instável: cai para MOCK_SETS e avisa o usuário na tela
         setSetsList(MOCK_SETS);
         setUsingFallbackSets(true);
       } finally {
@@ -83,7 +85,8 @@ export const Collection: React.FC = () => {
     const selectedSet = setsList.find(s => s.id === selectedSetId);
     if (!selectedSet) return null;
 
-    const cardsInCollection = collection.filter(item => item.cardDetails.id.startsWith(selectedSetId!));
+    // Prefixo com hífen: sem ele, cartas de "sv3pt5" contariam para "sv3".
+    const cardsInCollection = collection.filter(item => item.cardDetails.id.startsWith(selectedSetId + '-'));
     const uniqueCount = cardsInCollection.length;
 
     // Fonte única de preço (utils/pricing) — nunca fabrica valor para carta sem preço publicado.
@@ -286,14 +289,13 @@ export const Collection: React.FC = () => {
             ) : (
               <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                 {filteredSets.map(set => {
-                  // Calcular dados do set
-                  const uniqueOwned = collection.filter(item => item.cardDetails.id.startsWith(set.id)).length;
-                  const percentage = set.printedTotal > 0 ? Math.round((uniqueOwned / set.printedTotal) * 100) : 0;
-                  
+                  // Prefixo com hífen: sem ele, "sv3pt5" cairia dentro de "sv3".
+                  const cardsDoSet = collection.filter(item => item.cardDetails.id.startsWith(set.id + '-'));
+                  const uniqueOwned = cardsDoSet.length;
+                  const percentage = set.printedTotal > 0 ? Math.min(100, Math.round((uniqueOwned / set.printedTotal) * 100)) : 0;
+
                   // Fonte única de preço (utils/pricing) — itens sem preço publicado são ignorados na soma.
-                  const { totalUSD: setValuation } = somarValorColecao(
-                    collection.filter(item => item.cardDetails.id.startsWith(set.id))
-                  );
+                  const { totalUSD: setValuation } = somarValorColecao(cardsDoSet);
 
                   return (
                     <div

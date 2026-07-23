@@ -1,6 +1,18 @@
 import { supabase } from './supabaseClient';
 import type { TCGCard, TCGSet } from './pokemonApi';
 
+/** Converte uma linha de card_sets no TCGSet que a UI já consome. */
+const linhaParaSet = (row: any): TCGSet => ({
+  id: row.id,
+  name: row.name,
+  series: row.series || '',
+  printedTotal: row.printed_total || 0,
+  total: row.total || row.printed_total || 0,
+  releaseDate: row.release_date || '',
+  updatedAt: '',
+  images: { symbol: row.symbol || '', logo: row.logo || '' }
+});
+
 // =============================================================================
 // Busca de cartas contra o catálogo local (tabela public.cards_catalog no
 // Supabase), no lugar da API pública instável.
@@ -114,6 +126,21 @@ export const catalogApi = {
     if (error) throw new Error(`Busca no catálogo falhou: ${error.message}`);
 
     return { data: (data || []).map(linhaParaCard), totalCount: count ?? 0 };
+  },
+
+  /**
+   * Lista todos os sets, do mais recente ao mais antigo. Devolve [] quando o
+   * catálogo não está disponível ou a tabela card_sets ainda está vazia — aí
+   * quem chama cai para MOCK_SETS.
+   */
+  getSets: async (): Promise<TCGSet[]> => {
+    if (!supabase) return [];
+    const { data, error } = await supabase
+      .from('card_sets')
+      .select('*')
+      .order('release_date', { ascending: false, nullsFirst: false });
+    if (error || !data || data.length === 0) return [];
+    return data.map(linhaParaSet);
   },
 
   /** Lista as cartas de um set, ordenadas por número. */

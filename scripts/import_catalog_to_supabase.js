@@ -98,10 +98,17 @@ async function main() {
   const { count: jaImportadas } = await supabase
     .from('cards_catalog')
     .select('id', { count: 'exact', head: true });
-  console.log(`Já na tabela: ${jaImportadas ?? 0}. Começando/continuando...\n`);
+
+  // Retomada real: as cartas vêm ordenadas por id em páginas cheias de 250, e
+  // cada página é gravada de uma vez (all-or-nothing). Então a contagem atual é
+  // sempre múltiplo de 250 até a última página, e dá para pular direto para a
+  // primeira página ainda não importada — sem rebaixar a API instável relendo
+  // o que já está no banco.
+  const paginaInicial = Math.floor((jaImportadas ?? 0) / PAGE_SIZE) + 1;
+  console.log(`Já na tabela: ${jaImportadas ?? 0}. Retomando da página ${paginaInicial}.\n`);
 
   let importadas = 0;
-  for (let page = 1; page <= totalPaginas; page++) {
+  for (let page = paginaInicial; page <= totalPaginas; page++) {
     const url = `${API}/cards?select=${CAMPOS}&page=${page}&pageSize=${PAGE_SIZE}&orderBy=id`;
     const { data } = await fetchWithRetry(url);
     if (!Array.isArray(data) || data.length === 0) break;
