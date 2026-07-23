@@ -1,0 +1,1502 @@
+[
+  {
+    "id": "hgss4-1",
+    "name": "Aggron",
+    "number": "1",
+    "setName": "HS—Triumphant"
+  },
+  {
+    "id": "xy5-1",
+    "name": "Weedle",
+    "number": "1",
+    "setName": "Primal Clash"
+  },
+  {
+    "id": "pl1-1",
+    "name": "Ampharos",
+    "number": "1",
+    "setName": "Platinum"
+  },
+  {
+    "id": "dp3-1",
+    "name": "Ampharos",
+    "number": "1",
+    "setName": "Secret Wonders"
+  },
+  {
+    "id": "det1-1",
+    "name": "Bulbasaur",
+    "number": "1",
+    "setName": "Detective Pikachu"
+  },
+  {
+    "id": "dv1-1",
+    "name": "Dratini",
+    "number": "1",
+    "setName": "Dragon Vault"
+  },
+  {
+    "id": "mcd19-1",
+    "name": "Caterpie",
+    "number": "1",
+    "setName": "McDonald's Collection 2019"
+  },
+  {
+    "id": "pl3-1",
+    "name": "Absol G",
+    "number": "1",
+    "setName": "Supreme Victors"
+  },
+  {
+    "id": "ex12-1",
+    "name": "Aerodactyl",
+    "number": "1",
+    "setName": "Legend Maker"
+  },
+  {
+    "id": "ex3-1",
+    "name": "Absol",
+    "number": "1",
+    "setName": "Dragon"
+  },
+  {
+    "id": "ru1-1",
+    "name": "Venusaur",
+    "number": "1",
+    "setName": "Pokémon Rumble"
+  },
+  {
+    "id": "ecard2-H1",
+    "name": "Ampharos",
+    "number": "H1",
+    "setName": "Aquapolis"
+  },
+  {
+    "id": "base4-1",
+    "name": "Alakazam",
+    "number": "1",
+    "setName": "Base Set 2"
+  },
+  {
+    "id": "hgss1-1",
+    "name": "Arcanine",
+    "number": "1",
+    "setName": "HeartGold & SoulSilver"
+  },
+  {
+    "id": "ex11-1",
+    "name": "Beedrill δ",
+    "number": "1",
+    "setName": "Delta Species"
+  },
+  {
+    "id": "ex7-1",
+    "name": "Azumarill",
+    "number": "1",
+    "setName": "Team Rocket Returns"
+  },
+  {
+    "id": "gym1-1",
+    "name": "Blaine's Moltres",
+    "number": "1",
+    "setName": "Gym Heroes"
+  },
+  {
+    "id": "base3-1",
+    "name": "Aerodactyl",
+    "number": "1",
+    "setName": "Fossil"
+  },
+  {
+    "id": "sm9-1",
+    "name": "Celebi & Venusaur-GX",
+    "number": "1",
+    "setName": "Team Up"
+  },
+  {
+    "id": "xy2-1",
+    "name": "Caterpie",
+    "number": "1",
+    "setName": "Flashfire"
+  },
+  {
+    "id": "pop6-1",
+    "name": "Bastiodon",
+    "number": "1",
+    "setName": "POP Series 6"
+  },
+  {
+    "id": "ecard2-H2",
+    "name": "Arcanine",
+    "number": "H2",
+    "setName": "Aquapolis"
+  },
+  {
+    "id": "hgss4-2",
+    "name": "Altaria",
+    "number": "2",
+    "setName": "HS—Triumphant"
+  },
+  {
+    "id": "pl1-2",
+    "name": "Blastoise",
+    "number": "2",
+    "setName": "Platinum"
+  },
+  {
+    "id": "ex3-2",
+    "name": "Altaria",
+    "number": "2",
+    "setName": "Dragon"
+  },
+  {
+    "id": "dp3-2",
+    "name": "Blastoise",
+    "number": "2",
+    "setName": "Secret Wonders"
+  },
+  {
+    "id": "base3-2",
+    "name": "Articuno",
+    "number": "2",
+    "setName": "Fossil"
+  },
+  {
+    "id": "pl3-2",
+    "name": "Blaziken FB",
+    "number": "2",
+    "setName": "Supreme Victors"
+  },
+  {
+    "id": "ex11-2",
+    "name": "Crobat δ",
+    "number": "2",
+    "setName": "Delta Species"
+  },
+  {
+    "id": "pop6-2",
+    "name": "Lucario",
+    "number": "2",
+    "setName": "POP Series 6"
+  },
+  {
+    "id": "xy2-2",
+    "name": "Metapod",
+    "number": "2",
+    "setName": "Flashfire"
+  },
+  {
+    "id": "base4-2",
+    "name": "Blastoise",
+    "number": "2",
+    "setName": "Base Set 2"
+  },
+  {
+    "id": "gym1-2",
+    "name": "Brock's Rhydon",
+    "number": "2",
+    "setName": "Gym Heroes"
+  },
+  {
+    "id": "hgss1-2",
+    "name": "Azumarill",
+    "number": "2",
+    "setName": "HeartGold & SoulSilver"
+  },
+  {
+    "id": "det1-2",
+    "name": "Ludicolo",
+    "number": "2",
+    "setName": "Detective Pikachu"
+  },
+  {
+    "id": "sm9-2",
+    "name": "Weedle",
+    "number": "2",
+    "setName": "Team Up"
+  },
+  {
+    "id": "ex12-2",
+    "name": "Aggron",
+    "number": "2",
+    "setName": "Legend Maker"
+  },
+  {
+    "id": "ex7-2",
+    "name": "Dark Ampharos",
+    "number": "2",
+    "setName": "Team Rocket Returns"
+  },
+  {
+    "id": "ru1-2",
+    "name": "Cherrim",
+    "number": "2",
+    "setName": "Pokémon Rumble"
+  },
+  {
+    "id": "mcd19-2",
+    "name": "Alolan Exeggutor",
+    "number": "2",
+    "setName": "McDonald's Collection 2019"
+  },
+  {
+    "id": "xy5-2",
+    "name": "Kakuna",
+    "number": "2",
+    "setName": "Primal Clash"
+  },
+  {
+    "id": "xy11-1",
+    "name": "Tangela",
+    "number": "1",
+    "setName": "Steam Siege"
+  },
+  {
+    "id": "ex14-1",
+    "name": "Banette",
+    "number": "1",
+    "setName": "Crystal Guardians"
+  },
+  {
+    "id": "sm12-1",
+    "name": "Venusaur & Snivy-GX",
+    "number": "1",
+    "setName": "Cosmic Eclipse"
+  },
+  {
+    "id": "bw1-1",
+    "name": "Snivy",
+    "number": "1",
+    "setName": "Black & White"
+  },
+  {
+    "id": "sm115-1",
+    "name": "Caterpie",
+    "number": "1",
+    "setName": "Hidden Fates"
+  },
+  {
+    "id": "si1-1",
+    "name": "Mew",
+    "number": "1",
+    "setName": "Southern Islands"
+  },
+  {
+    "id": "dp1-1",
+    "name": "Dialga",
+    "number": "1",
+    "setName": "Diamond & Pearl"
+  },
+  {
+    "id": "sm3-1",
+    "name": "Caterpie",
+    "number": "1",
+    "setName": "Burning Shadows"
+  },
+  {
+    "id": "pop7-1",
+    "name": "Ampharos",
+    "number": "1",
+    "setName": "POP Series 7"
+  },
+  {
+    "id": "gym2-1",
+    "name": "Blaine's Arcanine",
+    "number": "1",
+    "setName": "Gym Challenge"
+  },
+  {
+    "id": "col1-1",
+    "name": "Clefable",
+    "number": "1",
+    "setName": "Call of Legends"
+  },
+  {
+    "id": "ex9-1",
+    "name": "Blaziken",
+    "number": "1",
+    "setName": "Emerald"
+  },
+  {
+    "id": "bw10-1",
+    "name": "Surskit",
+    "number": "1",
+    "setName": "Plasma Blast"
+  },
+  {
+    "id": "swsh35-1",
+    "name": "Venusaur V",
+    "number": "1",
+    "setName": "Champion's Path"
+  },
+  {
+    "id": "xy7-1",
+    "name": "Oddish",
+    "number": "1",
+    "setName": "Ancient Origins"
+  },
+  {
+    "id": "sm1-1",
+    "name": "Caterpie",
+    "number": "1",
+    "setName": "Sun & Moon"
+  },
+  {
+    "id": "ex13-1",
+    "name": "Armaldo δ",
+    "number": "1",
+    "setName": "Holon Phantoms"
+  },
+  {
+    "id": "dv1-2",
+    "name": "Dratini",
+    "number": "2",
+    "setName": "Dragon Vault"
+  },
+  {
+    "id": "ecard2-H3",
+    "name": "Ariados",
+    "number": "H3",
+    "setName": "Aquapolis"
+  },
+  {
+    "id": "sm12-2",
+    "name": "Oddish",
+    "number": "2",
+    "setName": "Cosmic Eclipse"
+  },
+  {
+    "id": "ex9-2",
+    "name": "Deoxys",
+    "number": "2",
+    "setName": "Emerald"
+  },
+  {
+    "id": "bw1-2",
+    "name": "Snivy",
+    "number": "2",
+    "setName": "Black & White"
+  },
+  {
+    "id": "base4-3",
+    "name": "Chansey",
+    "number": "3",
+    "setName": "Base Set 2"
+  },
+  {
+    "id": "ru1-3",
+    "name": "Ninetales",
+    "number": "3",
+    "setName": "Pokémon Rumble"
+  },
+  {
+    "id": "xy5-3",
+    "name": "Beedrill",
+    "number": "3",
+    "setName": "Primal Clash"
+  },
+  {
+    "id": "pop6-3",
+    "name": "Manaphy",
+    "number": "3",
+    "setName": "POP Series 6"
+  },
+  {
+    "id": "si1-2",
+    "name": "Pidgeot",
+    "number": "2",
+    "setName": "Southern Islands"
+  },
+  {
+    "id": "ex11-3",
+    "name": "Dragonite δ",
+    "number": "3",
+    "setName": "Delta Species"
+  },
+  {
+    "id": "pl3-3",
+    "name": "Drifblim FB",
+    "number": "3",
+    "setName": "Supreme Victors"
+  },
+  {
+    "id": "base3-3",
+    "name": "Ditto",
+    "number": "3",
+    "setName": "Fossil"
+  },
+  {
+    "id": "hgss1-3",
+    "name": "Clefable",
+    "number": "3",
+    "setName": "HeartGold & SoulSilver"
+  },
+  {
+    "id": "ex13-2",
+    "name": "Cradily δ",
+    "number": "2",
+    "setName": "Holon Phantoms"
+  },
+  {
+    "id": "hgss4-3",
+    "name": "Celebi",
+    "number": "3",
+    "setName": "HS—Triumphant"
+  },
+  {
+    "id": "xy7-2",
+    "name": "Gloom",
+    "number": "2",
+    "setName": "Ancient Origins"
+  },
+  {
+    "id": "bw10-2",
+    "name": "Masquerain",
+    "number": "2",
+    "setName": "Plasma Blast"
+  },
+  {
+    "id": "ex7-3",
+    "name": "Dark Crobat",
+    "number": "3",
+    "setName": "Team Rocket Returns"
+  },
+  {
+    "id": "ex12-3",
+    "name": "Cradily",
+    "number": "3",
+    "setName": "Legend Maker"
+  },
+  {
+    "id": "swsh35-2",
+    "name": "Weedle",
+    "number": "2",
+    "setName": "Champion's Path"
+  },
+  {
+    "id": "gym2-2",
+    "name": "Blaine's Charizard",
+    "number": "2",
+    "setName": "Gym Challenge"
+  },
+  {
+    "id": "xy2-3",
+    "name": "Butterfree",
+    "number": "3",
+    "setName": "Flashfire"
+  },
+  {
+    "id": "xy11-2",
+    "name": "Tangrowth",
+    "number": "2",
+    "setName": "Steam Siege"
+  },
+  {
+    "id": "det1-3",
+    "name": "Morelull",
+    "number": "3",
+    "setName": "Detective Pikachu"
+  },
+  {
+    "id": "ex3-3",
+    "name": "Crawdaunt",
+    "number": "3",
+    "setName": "Dragon"
+  },
+  {
+    "id": "dv1-3",
+    "name": "Dragonair",
+    "number": "3",
+    "setName": "Dragon Vault"
+  },
+  {
+    "id": "sm9-3",
+    "name": "Weedle",
+    "number": "3",
+    "setName": "Team Up"
+  },
+  {
+    "id": "pop7-2",
+    "name": "Gallade",
+    "number": "2",
+    "setName": "POP Series 7"
+  },
+  {
+    "id": "sm1-2",
+    "name": "Metapod",
+    "number": "2",
+    "setName": "Sun & Moon"
+  },
+  {
+    "id": "mcd19-3",
+    "name": "Magmar",
+    "number": "3",
+    "setName": "McDonald's Collection 2019"
+  },
+  {
+    "id": "col1-2",
+    "name": "Deoxys",
+    "number": "2",
+    "setName": "Call of Legends"
+  },
+  {
+    "id": "pl1-3",
+    "name": "Blaziken",
+    "number": "3",
+    "setName": "Platinum"
+  },
+  {
+    "id": "sm115-2",
+    "name": "Metapod",
+    "number": "2",
+    "setName": "Hidden Fates"
+  },
+  {
+    "id": "gym1-3",
+    "name": "Erika's Clefable",
+    "number": "3",
+    "setName": "Gym Heroes"
+  },
+  {
+    "id": "dp3-3",
+    "name": "Charizard",
+    "number": "3",
+    "setName": "Secret Wonders"
+  },
+  {
+    "id": "sm2-1",
+    "name": "Bellsprout",
+    "number": "1",
+    "setName": "Guardians Rising"
+  },
+  {
+    "id": "base5-1",
+    "name": "Dark Alakazam",
+    "number": "1",
+    "setName": "Team Rocket"
+  },
+  {
+    "id": "xy4-1",
+    "name": "Venonat",
+    "number": "1",
+    "setName": "Phantom Forces"
+  },
+  {
+    "id": "bw11-1",
+    "name": "Tangela",
+    "number": "1",
+    "setName": "Legendary Treasures"
+  },
+  {
+    "id": "ex4-1",
+    "name": "Team Aqua's Cacturne",
+    "number": "1",
+    "setName": "Team Magma vs Team Aqua"
+  },
+  {
+    "id": "bw4-1",
+    "name": "Pinsir",
+    "number": "1",
+    "setName": "Next Destinies"
+  },
+  {
+    "id": "bw9-1",
+    "name": "Weedle",
+    "number": "1",
+    "setName": "Plasma Freeze"
+  },
+  {
+    "id": "base1-1",
+    "name": "Alakazam",
+    "number": "1",
+    "setName": "Base"
+  },
+  {
+    "id": "pop3-1",
+    "name": "Blastoise",
+    "number": "1",
+    "setName": "POP Series 3"
+  },
+  {
+    "id": "dp4-1",
+    "name": "Blaziken",
+    "number": "1",
+    "setName": "Great Encounters"
+  },
+  {
+    "id": "bw7-1",
+    "name": "Oddish",
+    "number": "1",
+    "setName": "Boundaries Crossed"
+  },
+  {
+    "id": "ex8-1",
+    "name": "Altaria",
+    "number": "1",
+    "setName": "Deoxys"
+  },
+  {
+    "id": "bw5-1",
+    "name": "Bulbasaur",
+    "number": "1",
+    "setName": "Dark Explorers"
+  },
+  {
+    "id": "pop5-1",
+    "name": "Ho-Oh",
+    "number": "1",
+    "setName": "POP Series 5"
+  },
+  {
+    "id": "sm5-1",
+    "name": "Exeggcute",
+    "number": "1",
+    "setName": "Ultra Prism"
+  },
+  {
+    "id": "xy10-1",
+    "name": "Shuckle",
+    "number": "1",
+    "setName": "Fates Collide"
+  },
+  {
+    "id": "sm8-1",
+    "name": "Tangela",
+    "number": "1",
+    "setName": "Lost Thunder"
+  },
+  {
+    "id": "hgss2-1",
+    "name": "Jirachi",
+    "number": "1",
+    "setName": "HS—Unleashed"
+  },
+  {
+    "id": "dpp-DP01",
+    "name": "Turtwig",
+    "number": "DP01",
+    "setName": "DP Black Star Promos"
+  },
+  {
+    "id": "swsh1-1",
+    "name": "Celebi V",
+    "number": "1",
+    "setName": "Sword & Shield"
+  },
+  {
+    "id": "basep-1",
+    "name": "Pikachu",
+    "number": "1",
+    "setName": "Wizards Black Star Promos"
+  },
+  {
+    "id": "swsh4-1",
+    "name": "Weedle",
+    "number": "1",
+    "setName": "Vivid Voltage"
+  },
+  {
+    "id": "xy1-1",
+    "name": "Venusaur-EX",
+    "number": "1",
+    "setName": "XY"
+  },
+  {
+    "id": "pop1-1",
+    "name": "Blaziken",
+    "number": "1",
+    "setName": "POP Series 1"
+  },
+  {
+    "id": "bw8-1",
+    "name": "Turtwig",
+    "number": "1",
+    "setName": "Plasma Storm"
+  },
+  {
+    "id": "base6-1",
+    "name": "Alakazam",
+    "number": "1",
+    "setName": "Legendary Collection"
+  },
+  {
+    "id": "pop9-1",
+    "name": "Garchomp",
+    "number": "1",
+    "setName": "POP Series 9"
+  },
+  {
+    "id": "pop4-1",
+    "name": "Chimecho δ",
+    "number": "1",
+    "setName": "POP Series 4"
+  },
+  {
+    "id": "neo4-1",
+    "name": "Dark Ampharos",
+    "number": "1",
+    "setName": "Neo Destiny"
+  },
+  {
+    "id": "neo3-1",
+    "name": "Ampharos",
+    "number": "1",
+    "setName": "Neo Revelation"
+  },
+  {
+    "id": "pl4-1",
+    "name": "Charizard",
+    "number": "1",
+    "setName": "Arceus"
+  },
+  {
+    "id": "mcd19-4",
+    "name": "Alolan Sandshrew",
+    "number": "4",
+    "setName": "McDonald's Collection 2019"
+  },
+  {
+    "id": "sm115-3",
+    "name": "Butterfree",
+    "number": "3",
+    "setName": "Hidden Fates"
+  },
+  {
+    "id": "base3-4",
+    "name": "Dragonite",
+    "number": "4",
+    "setName": "Fossil"
+  },
+  {
+    "id": "ex9-3",
+    "name": "Exploud",
+    "number": "3",
+    "setName": "Emerald"
+  },
+  {
+    "id": "pop7-3",
+    "name": "Latias",
+    "number": "3",
+    "setName": "POP Series 7"
+  },
+  {
+    "id": "pop6-4",
+    "name": "Pachirisu",
+    "number": "4",
+    "setName": "POP Series 6"
+  },
+  {
+    "id": "det1-4",
+    "name": "Charmander",
+    "number": "4",
+    "setName": "Detective Pikachu"
+  },
+  {
+    "id": "ex4-2",
+    "name": "Team Aqua's Crawdaunt",
+    "number": "2",
+    "setName": "Team Magma vs Team Aqua"
+  },
+  {
+    "id": "hgss1-4",
+    "name": "Gyarados",
+    "number": "4",
+    "setName": "HeartGold & SoulSilver"
+  },
+  {
+    "id": "xy1-2",
+    "name": "M Venusaur-EX",
+    "number": "2",
+    "setName": "XY"
+  },
+  {
+    "id": "ex8-2",
+    "name": "Beautifly",
+    "number": "2",
+    "setName": "Deoxys"
+  },
+  {
+    "id": "bw5-2",
+    "name": "Ivysaur",
+    "number": "2",
+    "setName": "Dark Explorers"
+  },
+  {
+    "id": "dpp-DP02",
+    "name": "Chimchar",
+    "number": "DP02",
+    "setName": "DP Black Star Promos"
+  },
+  {
+    "id": "sm2-2",
+    "name": "Weepinbell",
+    "number": "2",
+    "setName": "Guardians Rising"
+  },
+  {
+    "id": "pop4-2",
+    "name": "Deoxys δ",
+    "number": "2",
+    "setName": "POP Series 4"
+  },
+  {
+    "id": "bw7-2",
+    "name": "Gloom",
+    "number": "2",
+    "setName": "Boundaries Crossed"
+  },
+  {
+    "id": "xy4-2",
+    "name": "Venomoth",
+    "number": "2",
+    "setName": "Phantom Forces"
+  },
+  {
+    "id": "col1-3",
+    "name": "Dialga",
+    "number": "3",
+    "setName": "Call of Legends"
+  },
+  {
+    "id": "ex12-4",
+    "name": "Delcatty",
+    "number": "4",
+    "setName": "Legend Maker"
+  },
+  {
+    "id": "bw11-2",
+    "name": "Tangrowth",
+    "number": "2",
+    "setName": "Legendary Treasures"
+  },
+  {
+    "id": "pl1-4",
+    "name": "Delcatty",
+    "number": "4",
+    "setName": "Platinum"
+  },
+  {
+    "id": "swsh35-3",
+    "name": "Kakuna",
+    "number": "3",
+    "setName": "Champion's Path"
+  },
+  {
+    "id": "base5-2",
+    "name": "Dark Arbok",
+    "number": "2",
+    "setName": "Team Rocket"
+  },
+  {
+    "id": "ecard2-H4",
+    "name": "Azumarill",
+    "number": "H4",
+    "setName": "Aquapolis"
+  },
+  {
+    "id": "neo4-2",
+    "name": "Dark Crobat",
+    "number": "2",
+    "setName": "Neo Destiny"
+  },
+  {
+    "id": "ex3-4",
+    "name": "Flygon",
+    "number": "4",
+    "setName": "Dragon"
+  },
+  {
+    "id": "xy2-4",
+    "name": "Pineco",
+    "number": "4",
+    "setName": "Flashfire"
+  },
+  {
+    "id": "pop5-2",
+    "name": "Lugia",
+    "number": "2",
+    "setName": "POP Series 5"
+  },
+  {
+    "id": "base6-2",
+    "name": "Articuno",
+    "number": "2",
+    "setName": "Legendary Collection"
+  },
+  {
+    "id": "dv1-4",
+    "name": "Dragonair",
+    "number": "4",
+    "setName": "Dragon Vault"
+  },
+  {
+    "id": "ex11-4",
+    "name": "Espeon δ",
+    "number": "4",
+    "setName": "Delta Species"
+  },
+  {
+    "id": "dp4-2",
+    "name": "Cresselia",
+    "number": "2",
+    "setName": "Great Encounters"
+  },
+  {
+    "id": "dp1-2",
+    "name": "Dusknoir",
+    "number": "2",
+    "setName": "Diamond & Pearl"
+  },
+  {
+    "id": "gym2-3",
+    "name": "Brock's Ninetales",
+    "number": "3",
+    "setName": "Gym Challenge"
+  },
+  {
+    "id": "pop1-2",
+    "name": "Metagross",
+    "number": "2",
+    "setName": "POP Series 1"
+  },
+  {
+    "id": "si1-3",
+    "name": "Onix",
+    "number": "3",
+    "setName": "Southern Islands"
+  },
+  {
+    "id": "dp3-4",
+    "name": "Entei",
+    "number": "4",
+    "setName": "Secret Wonders"
+  },
+  {
+    "id": "base4-4",
+    "name": "Charizard",
+    "number": "4",
+    "setName": "Base Set 2"
+  },
+  {
+    "id": "pl4-2",
+    "name": "Froslass",
+    "number": "2",
+    "setName": "Arceus"
+  },
+  {
+    "id": "bw8-2",
+    "name": "Grotle",
+    "number": "2",
+    "setName": "Plasma Storm"
+  },
+  {
+    "id": "pop3-2",
+    "name": "Flareon",
+    "number": "2",
+    "setName": "POP Series 3"
+  },
+  {
+    "id": "xy11-3",
+    "name": "Hoppip",
+    "number": "3",
+    "setName": "Steam Siege"
+  },
+  {
+    "id": "sm3-2",
+    "name": "Metapod",
+    "number": "2",
+    "setName": "Burning Shadows"
+  },
+  {
+    "id": "swsh1-2",
+    "name": "Roselia",
+    "number": "2",
+    "setName": "Sword & Shield"
+  },
+  {
+    "id": "pop9-2",
+    "name": "Manaphy",
+    "number": "2",
+    "setName": "POP Series 9"
+  },
+  {
+    "id": "xy7-3",
+    "name": "Vileplume",
+    "number": "3",
+    "setName": "Ancient Origins"
+  },
+  {
+    "id": "bw10-3",
+    "name": "Lileep",
+    "number": "3",
+    "setName": "Plasma Blast"
+  },
+  {
+    "id": "bw4-2",
+    "name": "Seedot",
+    "number": "2",
+    "setName": "Next Destinies"
+  },
+  {
+    "id": "sm9-4",
+    "name": "Kakuna",
+    "number": "4",
+    "setName": "Team Up"
+  },
+  {
+    "id": "hgss4-4",
+    "name": "Drapion",
+    "number": "4",
+    "setName": "HS—Triumphant"
+  },
+  {
+    "id": "ex13-3",
+    "name": "Deoxys δ",
+    "number": "3",
+    "setName": "Holon Phantoms"
+  },
+  {
+    "id": "sm5-2",
+    "name": "Yanma",
+    "number": "2",
+    "setName": "Ultra Prism"
+  },
+  {
+    "id": "sm75-1",
+    "name": "Charmander",
+    "number": "1",
+    "setName": "Dragon Majesty"
+  },
+  {
+    "id": "ex10-1",
+    "name": "Ampharos",
+    "number": "1",
+    "setName": "Unseen Forces"
+  },
+  {
+    "id": "bw6-1",
+    "name": "Hoppip",
+    "number": "1",
+    "setName": "Dragons Exalted"
+  },
+  {
+    "id": "si1-4",
+    "name": "Togepi",
+    "number": "4",
+    "setName": "Southern Islands"
+  },
+  {
+    "id": "bw5-3",
+    "name": "Venusaur",
+    "number": "3",
+    "setName": "Dark Explorers"
+  },
+  {
+    "id": "dp1-3",
+    "name": "Electivire",
+    "number": "3",
+    "setName": "Diamond & Pearl"
+  },
+  {
+    "id": "xy11-4",
+    "name": "Skiploom",
+    "number": "4",
+    "setName": "Steam Siege"
+  },
+  {
+    "id": "hgss4-5",
+    "name": "Mamoswine",
+    "number": "5",
+    "setName": "HS—Triumphant"
+  },
+  {
+    "id": "sm12-3",
+    "name": "Gloom",
+    "number": "3",
+    "setName": "Cosmic Eclipse"
+  },
+  {
+    "id": "ex7-4",
+    "name": "Dark Electrode",
+    "number": "4",
+    "setName": "Team Rocket Returns"
+  },
+  {
+    "id": "sm5-3",
+    "name": "Yanmega",
+    "number": "3",
+    "setName": "Ultra Prism"
+  },
+  {
+    "id": "swsh1-3",
+    "name": "Roselia",
+    "number": "3",
+    "setName": "Sword & Shield"
+  },
+  {
+    "id": "pl3-4",
+    "name": "Electivire FB",
+    "number": "4",
+    "setName": "Supreme Victors"
+  },
+  {
+    "id": "hgss1-5",
+    "name": "Hitmontop",
+    "number": "5",
+    "setName": "HeartGold & SoulSilver"
+  },
+  {
+    "id": "ex12-5",
+    "name": "Gengar",
+    "number": "5",
+    "setName": "Legend Maker"
+  },
+  {
+    "id": "pl4-3",
+    "name": "Heatran",
+    "number": "3",
+    "setName": "Arceus"
+  },
+  {
+    "id": "bw10-4",
+    "name": "Cradily",
+    "number": "4",
+    "setName": "Plasma Blast"
+  },
+  {
+    "id": "pop4-3",
+    "name": "Flygon",
+    "number": "3",
+    "setName": "POP Series 4"
+  },
+  {
+    "id": "ex3-5",
+    "name": "Golem",
+    "number": "5",
+    "setName": "Dragon"
+  },
+  {
+    "id": "swsh4-2",
+    "name": "Kakuna",
+    "number": "2",
+    "setName": "Vivid Voltage"
+  },
+  {
+    "id": "xy5-4",
+    "name": "Tangela",
+    "number": "4",
+    "setName": "Primal Clash"
+  },
+  {
+    "id": "ex9-4",
+    "name": "Gardevoir",
+    "number": "4",
+    "setName": "Emerald"
+  },
+  {
+    "id": "ex11-5",
+    "name": "Flareon δ",
+    "number": "5",
+    "setName": "Delta Species"
+  },
+  {
+    "id": "ex4-3",
+    "name": "Team Aqua's Kyogre",
+    "number": "3",
+    "setName": "Team Magma vs Team Aqua"
+  },
+  {
+    "id": "base3-5",
+    "name": "Gengar",
+    "number": "5",
+    "setName": "Fossil"
+  },
+  {
+    "id": "dv1-5",
+    "name": "Dragonite",
+    "number": "5",
+    "setName": "Dragon Vault"
+  },
+  {
+    "id": "dp4-3",
+    "name": "Darkrai",
+    "number": "3",
+    "setName": "Great Encounters"
+  },
+  {
+    "id": "dp3-5",
+    "name": "Flygon",
+    "number": "5",
+    "setName": "Secret Wonders"
+  },
+  {
+    "id": "bw1-3",
+    "name": "Servine",
+    "number": "3",
+    "setName": "Black & White"
+  },
+  {
+    "id": "ecard2-H5",
+    "name": "Bellossom",
+    "number": "H5",
+    "setName": "Aquapolis"
+  },
+  {
+    "id": "pop1-3",
+    "name": "Rayquaza",
+    "number": "3",
+    "setName": "POP Series 1"
+  },
+  {
+    "id": "gym2-4",
+    "name": "Erika's Venusaur",
+    "number": "4",
+    "setName": "Gym Challenge"
+  },
+  {
+    "id": "xy4-3",
+    "name": "Yanma",
+    "number": "3",
+    "setName": "Phantom Forces"
+  },
+  {
+    "id": "ex10-2",
+    "name": "Ariados",
+    "number": "2",
+    "setName": "Unseen Forces"
+  },
+  {
+    "id": "xy7-4",
+    "name": "Bellossom",
+    "number": "4",
+    "setName": "Ancient Origins"
+  },
+  {
+    "id": "pl1-5",
+    "name": "Dialga",
+    "number": "5",
+    "setName": "Platinum"
+  },
+  {
+    "id": "pop3-3",
+    "name": "Jolteon",
+    "number": "3",
+    "setName": "POP Series 3"
+  },
+  {
+    "id": "ex8-3",
+    "name": "Breloom",
+    "number": "3",
+    "setName": "Deoxys"
+  },
+  {
+    "id": "basep-2",
+    "name": "Electabuzz",
+    "number": "2",
+    "setName": "Wizards Black Star Promos"
+  },
+  {
+    "id": "base6-3",
+    "name": "Charizard",
+    "number": "3",
+    "setName": "Legendary Collection"
+  },
+  {
+    "id": "bw4-3",
+    "name": "Kricketot",
+    "number": "3",
+    "setName": "Next Destinies"
+  },
+  {
+    "id": "hgss2-2",
+    "name": "Magmortar",
+    "number": "2",
+    "setName": "HS—Unleashed"
+  },
+  {
+    "id": "bw11-3",
+    "name": "Shuckle",
+    "number": "3",
+    "setName": "Legendary Treasures"
+  },
+  {
+    "id": "pop7-4",
+    "name": "Latios",
+    "number": "4",
+    "setName": "POP Series 7"
+  },
+  {
+    "id": "ru1-4",
+    "name": "Heatran",
+    "number": "4",
+    "setName": "Pokémon Rumble"
+  },
+  {
+    "id": "neo3-2",
+    "name": "Blissey",
+    "number": "2",
+    "setName": "Neo Revelation"
+  },
+  {
+    "id": "mcd19-5",
+    "name": "Lapras",
+    "number": "5",
+    "setName": "McDonald's Collection 2019"
+  },
+  {
+    "id": "sm8-2",
+    "name": "Tangrowth",
+    "number": "2",
+    "setName": "Lost Thunder"
+  },
+  {
+    "id": "sm75-2",
+    "name": "Charmeleon",
+    "number": "2",
+    "setName": "Dragon Majesty"
+  },
+  {
+    "id": "sm9-5",
+    "name": "Beedrill",
+    "number": "5",
+    "setName": "Team Up"
+  },
+  {
+    "id": "bw6-2",
+    "name": "Skiploom",
+    "number": "2",
+    "setName": "Dragons Exalted"
+  },
+  {
+    "id": "neo4-3",
+    "name": "Dark Donphan",
+    "number": "3",
+    "setName": "Neo Destiny"
+  },
+  {
+    "id": "bw7-3",
+    "name": "Vileplume",
+    "number": "3",
+    "setName": "Boundaries Crossed"
+  },
+  {
+    "id": "swsh35-4",
+    "name": "Beedrill",
+    "number": "4",
+    "setName": "Champion's Path"
+  },
+  {
+    "id": "pop9-3",
+    "name": "Raichu",
+    "number": "3",
+    "setName": "POP Series 9"
+  },
+  {
+    "id": "dpp-DP03",
+    "name": "Piplup",
+    "number": "DP03",
+    "setName": "DP Black Star Promos"
+  },
+  {
+    "id": "xy10-2",
+    "name": "Burmy",
+    "number": "2",
+    "setName": "Fates Collide"
+  },
+  {
+    "id": "sm115-4",
+    "name": "Paras",
+    "number": "4",
+    "setName": "Hidden Fates"
+  },
+  {
+    "id": "base1-2",
+    "name": "Blastoise",
+    "number": "2",
+    "setName": "Base"
+  },
+  {
+    "id": "sm3-3",
+    "name": "Butterfree",
+    "number": "3",
+    "setName": "Burning Shadows"
+  },
+  {
+    "id": "xy2-5",
+    "name": "Seedot",
+    "number": "5",
+    "setName": "Flashfire"
+  },
+  {
+    "id": "xy1-3",
+    "name": "Weedle",
+    "number": "3",
+    "setName": "XY"
+  },
+  {
+    "id": "ex14-2",
+    "name": "Blastoise δ",
+    "number": "2",
+    "setName": "Crystal Guardians"
+  },
+  {
+    "id": "det1-5",
+    "name": "Charizard",
+    "number": "5",
+    "setName": "Detective Pikachu"
+  },
+  {
+    "id": "pl1-6",
+    "name": "Dialga",
+    "number": "6",
+    "setName": "Platinum"
+  },
+  {
+    "id": "dpp-DP04",
+    "name": "Pachirisu",
+    "number": "DP04",
+    "setName": "DP Black Star Promos"
+  },
+  {
+    "id": "xy5-5",
+    "name": "Tangrowth",
+    "number": "5",
+    "setName": "Primal Clash"
+  },
+  {
+    "id": "pop6-5",
+    "name": "Rampardos",
+    "number": "5",
+    "setName": "POP Series 6"
+  },
+  {
+    "id": "xy2-6",
+    "name": "Nuzleaf",
+    "number": "6",
+    "setName": "Flashfire"
+  },
+  {
+    "id": "ex14-3",
+    "name": "Camerupt",
+    "number": "3",
+    "setName": "Crystal Guardians"
+  },
+  {
+    "id": "dv1-6",
+    "name": "Bagon",
+    "number": "6",
+    "setName": "Dragon Vault"
+  },
+  {
+    "id": "ex8-4",
+    "name": "Camerupt",
+    "number": "4",
+    "setName": "Deoxys"
+  },
+  {
+    "id": "dp4-4",
+    "name": "Darkrai",
+    "number": "4",
+    "setName": "Great Encounters"
+  }
+]

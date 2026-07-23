@@ -19,6 +19,21 @@ try {
 
 const API_KEY = process.env.VITE_POKEMON_API_KEY || ''; // Opcional, aumenta limites de requisição
 
+async function fetchWithRetry(url, headers = {}, retries = 5, delay = 2000) {
+  for (let i = 0; i < retries; i++) {
+    try {
+      const response = await fetch(url, { headers });
+      if (response.ok) return response;
+      console.warn(`[Aviso] HTTP ${response.status} ao buscar. Tentativa ${i + 1}/${retries}. Retentando em ${delay}ms...`);
+    } catch (e) {
+      console.warn(`[Aviso] Erro de rede ao buscar. Tentativa ${i + 1}/${retries}. Retentando em ${delay}ms...`);
+    }
+    await new Promise(resolve => setTimeout(resolve, delay));
+    delay *= 2; // Dobra o tempo a cada falha
+  }
+  throw new Error(`Falha definitiva ao buscar URL após ${retries} tentativas: ${url}`);
+}
+
 async function generateCatalog() {
   console.log("Iniciando geração do catálogo completo de cartas...");
   
@@ -35,12 +50,7 @@ async function generateCatalog() {
   while (hasMore) {
     console.log(`Buscando página ${page}...`);
     try {
-      const response = await fetch(`https://api.pokemontcg.io/v2/cards?page=${page}&pageSize=${pageSize}&select=id,name,number,set`, { headers });
-      if (!response.ok) {
-        console.error(`Erro ao buscar página ${page}: ${response.statusText}`);
-        break;
-      }
-
+      const response = await fetchWithRetry(`https://api.pokemontcg.io/v2/cards?page=${page}&pageSize=${pageSize}`, headers);
       const result = await response.json();
       const cards = result.data;
 
@@ -65,7 +75,7 @@ async function generateCatalog() {
         hasMore = false;
       }
     } catch (e) {
-      console.error("Erro na requisição:", e);
+      console.error("Erro na requisição:", e.message);
       break;
     }
 
