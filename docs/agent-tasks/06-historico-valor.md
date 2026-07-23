@@ -1,77 +1,120 @@
 # Tarefa 06 — Histórico de valor real (matar o gráfico falso)
 
-Risco: 🟡 Médio. Leia primeiro `docs/agent-tasks/README.md` (regras gerais).
+Risco: 🟡 Médio. Leia primeiro `docs/agent-tasks/README.md`. Brief EXAUSTIVO.
 
 ## Contexto
 
-O gráfico "Valor da Coleção" no `src/components/Dashboard.tsx` é 100% sintético:
-as datas são fixas (16/07 a 22/07) e os valores são o total de hoje multiplicado
-por fatores fixos. Ele mostra um "passado" que nunca existiu. Esta tarefa
-substitui isso por snapshots reais gravados ao longo do tempo.
+O gráfico "Valor da Coleção" em `src/components/Dashboard.tsx` é sintético: o
+objeto `chartData` (linhas ~51-77) tem datas fixas ("16/07"…"22/07") e valores
+que são o total de hoje multiplicado por fatores. Mostra um passado que nunca
+existiu. Esta tarefa troca isso por snapshots reais gravados dia a dia.
 
 ## Arquivos que você PODE editar/criar
 
-- `supabase/migrations/004_portfolio_snapshots.sql` (CRIAR — mas NÃO rodar; o
-  dono roda no SQL Editor)
+- `supabase/migrations/004_portfolio_snapshots.sql` (CRIAR — NÃO rodar; o dono
+  roda no SQL Editor)
 - `src/components/Dashboard.tsx`
-- Opcional: um pequeno helper em `src/services/` para gravar/ler snapshots.
 
-Não toque em auth, coleção nem nos serviços de catálogo.
+Não toque em auth, coleção, serviços de catálogo, nem em outros componentes.
 
 ## Passo 1 — Migration (você escreve, o dono roda)
 
-Crie `supabase/migrations/004_portfolio_snapshots.sql` com uma tabela:
+Crie `supabase/migrations/004_portfolio_snapshots.sql`. Use as migrations
+existentes em `supabase/migrations/` e `supabase/schema.sql` como modelo de
+estilo (RLS por dono com `auth.uid() = user_id`). A tabela:
 
-`portfolio_snapshots`: `user_id uuid` (FK auth.users, on delete cascade),
-`snapshot_date date`, `total_usd numeric(12,2)`, `created_at timestamptz`.
-PK composta `(user_id, snapshot_date)` — um snapshot por usuário por dia.
-RLS: usuário só lê/escreve os próprios registros (siga o padrão das outras
-policies em `supabase/schema.sql`, com `auth.uid() = user_id`).
+```sql
+create table if not exists public.portfolio_snapshots (
+  user_id       uuid        not null references auth.users (id) on delete cascade,
+  snapshot_date date        not null,
+  total_usd     numeric(12,2) not null default 0,
+  created_at    timestamptz not null default now(),
+  constraint portfolio_snapshots_pkey primary key (user_id, snapshot_date)
+);
+```
+Habilite RLS e crie policies de select/insert/update onde `auth.uid() = user_id`
+(espelhe as policies de `collection_items` no `schema.sql`). No relatório, avise:
+"rodar 004 no SQL Editor".
 
-No relatório, avise: "rodar 004 no SQL Editor".
+## Passo 2 — Dashboard: importar o cliente Supabase
 
-## Passo 2 — Gravar o snapshot do dia
+No topo de `Dashboard.tsx`, importe `supabase` de `../services/supabaseClient`.
 
-Quando há sessão real e o app carrega, gravar (upsert onConflict
-`'user_id,snapshot_date'`) o valor total da coleção de hoje:
-- Data = hoje (YYYY-MM-DD).
-- total_usd = `somarValorColecao(collection).totalUSD` (função em
-  `src/utils/pricing.ts`).
-- Um upsert por dia é suficiente (o onConflict garante idempotência).
-- Convidado (sem sessão) NÃO grava.
+## Passo 3 — Gravar o snapshot do dia (novo useEffect)
 
-## Passo 3 — Ler e desenhar o real
+`somarValorColecao(collection)` (já usado na linha ~47, retorna
+`{ totalUSD }`) dá o valor de hoje. Adicione um `useEffect` que, quando há sessão
+real, faz upsert do snapshot de hoje:
 
-- Buscar os snapshots do usuário (ordenados por data) e alimentar o gráfico SVG
-  existente com eles, no lugar do `chartData` sintético.
-- Os seletores de período (7d / 30d / all) devem filtrar os snapshots reais por
-  data, não gerar dados.
+```tsx
+useEffect(() => {
+  const gravarSnapshot = async () => {
+    if (!supabase || !currentUser) return;
+    const { data: { user } } = await supabase.auth.getUser();
+    if (!user) return; // convidado não grava
+    const hoje = new Date().toISOString().slice(0, 10); // YYYY-MM-DD
+    await supabase.from('portfolio_snapshots').upsert({
+      user_id: user.id, snapshot_date: hoje, total_usd: totalValue
+    }, { onConflict: 'user_id,snapshot_date' });
+  };
+  gravarSnapshot().catch(err => console.error('Falha ao gravar snapshot:', err));
+}, [collection, currentUser]);
+```
+(`currentUser` já vem do `useApp()` no componente; confirme que está
+desestruturado — se não estiver, adicione-o.)
 
-## Passo 4 — Estado honesto quando não há histórico
+## Passo 4 — Ler os snapshots reais (novo estado + useEffect)
 
-Regra importante: **é melhor esconder o gráfico do que mostrar dado falso.**
-- Com menos de 2 snapshots (ainda não há série), NÃO desenhe a linha. Mostre um
-  estado vazio discreto: algo como "O histórico começa a ser registrado a partir
-  de hoje. Volte em alguns dias para ver a evolução."
-- O valor total atual (o número grande) continua sendo exibido normalmente.
+Adicione estado `const [snapshots, setSnapshots] = useState<{date: string; value: number}[]>([])`.
+Em um `useEffect` (deps `[currentUser]`), quando há sessão, buscar
+`portfolio_snapshots` do usuário ordenado por `snapshot_date` asc, e mapear para
+`{ date: row.snapshot_date, value: Number(row.total_usd) }`.
 
-## Restrições
+## Passo 5 — Trocar o gráfico sintético pelo real
 
-- Não invente pontos. Se só existe o de hoje, a série tem 1 ponto e cai no
-  estado vazio do passo 4.
-- Mantenha o visual do gráfico (o SVG e as cores atuais).
+1. REMOVA o objeto `chartData` inteiro (linhas ~51-77).
+2. Filtre os snapshots pelo `timeframe`:
+```tsx
+const agora = Date.now();
+const limiteDias = timeframe === '7d' ? 7 : timeframe === '30d' ? 30 : Infinity;
+const activePoints = snapshots
+  .filter(p => (agora - new Date(p.date).getTime()) / 86400000 <= limiteDias)
+  .map(p => ({ date: new Date(p.date).toLocaleDateString('pt-BR', { day: '2-digit', month: '2-digit' }), value: p.value }));
+```
+Isso mantém a variável `activePoints` que o resto do código (min/max, `points`,
+`linePath`, `areaPath`, rótulos) já consome — não precisa mexer no cálculo do SVG
+nem nos rótulos (linhas ~79-99 e ~181-185).
+
+## Passo 6 — Estado vazio honesto (menos de 2 pontos)
+
+Envolva o SVG do gráfico e os rótulos de data num condicional: se
+`activePoints.length >= 2`, renderiza o gráfico como hoje; senão, renderiza no
+mesmo espaço um aviso discreto, ex.:
+```tsx
+<div className="h-[150px] flex items-center justify-center text-center text-xs text-on-surface-variant/80 font-medium px-4">
+  O histórico de valor começa a ser registrado a partir de hoje. Volte em alguns
+  dias para ver a evolução da sua coleção.
+</div>
+```
+O número grande do valor total atual continua sendo exibido normalmente (não
+mexa nele).
+
+## NÃO fazer
+
+- Não invente pontos. Se só há o snapshot de hoje (1 ponto), cai no estado vazio.
+- Não mude o cálculo do SVG (linePath/areaPath/points) nem as cores.
+- Não rode a migration.
 
 ## Verificação
 
 - `npx tsc -b --pretty false` sai 0; `npm run build` passa.
-- Sem a migration rodada / sem sessão: o gráfico cai no estado vazio, sem
-  quebrar. Nenhuma data fixa 16/07–22/07 aparece mais no código nem na tela.
-- No relatório, confirme que a migration 004 precisa ser rodada pelo dono.
+- Sem sessão / sem a migration rodada: o gráfico cai no estado vazio, sem
+  quebrar. Nenhuma data "16/07".."22/07" aparece mais no código nem na tela.
+- Busque no código por `chartData` — não deve existir mais.
 
 ## Critérios de aceite (o tech lead vai checar)
 
-- `chartData` sintético removido do Dashboard.
-- Nenhuma data hardcoded no gráfico.
-- Estado vazio honesto quando há < 2 snapshots.
-- Convidado não grava snapshot.
-- Migration 004 escrita mas não executada pelo agente.
+- `chartData` sintético removido; nenhuma data hardcoded.
+- Migration 004 escrita, NÃO executada pelo agente.
+- Snapshot gravado só com sessão (convidado não grava).
+- Estado vazio honesto com < 2 pontos; SVG intacto quando há série.

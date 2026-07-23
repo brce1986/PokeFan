@@ -1,86 +1,110 @@
 # Tarefa 05 — Wishlist e perfil no Supabase
 
 Risco: 🟡 Médio-alto — mexe no AppContext. Leia primeiro
-`docs/agent-tasks/README.md` e RESPEITE os guardrails abaixo à risca.
+`docs/agent-tasks/README.md`. Brief EXAUSTIVO — faça só o listado.
 
 ## Contexto
 
-Hoje a lista de desejos (wishlist) e os dados de perfil (nome, avatar, moeda)
-vivem só no `localStorage`. Se o usuário troca de aparelho, perde tudo. As
-tabelas já existem no Supabase (`wishlist_items` e `profiles`, criadas na
-migration inicial) — falta o app gravar e ler delas quando há sessão, igual já
-é feito com a coleção.
+Wishlist e perfil (nome, avatar, moeda) vivem só no `localStorage`; trocar de
+aparelho perde tudo. As tabelas `wishlist_items` e `profiles` já existem no
+Supabase (veja `supabase/schema.sql`). Falta o app gravar/ler delas quando há
+sessão, igual já é feito com a coleção.
 
-## GUARDRAILS — leia antes de tocar em qualquer coisa
+## GUARDRAILS — NÃO ALTERE
 
-O `src/context/AppContext.tsx` contém correções de segurança e de sessão
-delicadas, feitas recentemente. Você **NÃO PODE** alterar:
+No `src/context/AppContext.tsx`, você **não pode** tocar em:
+- `login`, `loginWithGoogle`, `loginAsGuest`, `register`, `requestPasswordReset`,
+  `updatePassword`, `logout`.
+- O bloco de `supabase.auth.getSession` / `onAuthStateChange` / `GUEST_FLAG_KEY`
+  dentro do `useEffect` de inicialização.
+- `saveCollection` e `fetchSupabaseCollection`.
 
-- Nenhuma função de autenticação: `login`, `loginWithGoogle`, `loginAsGuest`,
-  `register`, `requestPasswordReset`, `updatePassword`, `logout`.
-- O `useEffect` de inicialização, na parte que trata `supabase.auth.getSession`,
-  `onAuthStateChange`, o `GUEST_FLAG_KEY` e a ordem de leitura do localStorage.
-- A função `saveCollection` e o fluxo de `collection_items`.
+Você SÓ adiciona sync de wishlist e profile. Use como MODELO a função
+`saveCollection` (linha ~293) e o `fetchSupabaseCollection` (linha ~261) — mesma
+estrutura: sempre localStorage, e Supabase só quando há sessão real
+(`supabase && currentUser` + `supabase.auth.getUser()` retornando user). Convidado
+(sem sessão) NUNCA grava na nuvem.
 
-Você SÓ adiciona persistência para wishlist e profile, **espelhando o padrão que
-já existe** para a coleção. Se precisar entender o padrão, LEIA `saveCollection`
-e o `useEffect` que faz `fetchSupabaseCollection` — copie a mesma estrutura
-(gravar no localStorage sempre, e no Supabase quando `supabase && currentUser` e
-há sessão via `supabase.auth.getUser()`).
+## Arquivo que você PODE editar
 
-## Arquivos que você PODE editar
+- `src/context/AppContext.tsx` — SOMENTE.
 
-- `src/context/AppContext.tsx` — SÓ para adicionar sync de wishlist e profile,
-  respeitando os guardrails acima.
-
-Não edite componentes nem serviços. Não crie tabelas (já existem).
-
-## Esquema das tabelas (já existentes — só para referência)
+## Esquema das tabelas (só referência, já existem)
 
 `wishlist_items`: `user_id uuid`, `card_id text`, `card_details jsonb`,
-`added_at timestamptz`. PK composta `(user_id, card_id)`.
+`added_at timestamptz`. PK `(user_id, card_id)`.
 
 `profiles`: `user_id uuid` (PK), `username text`, `avatar_url text`,
 `collector_rank text`, `currency text`, `updated_at timestamptz`.
 
-(Se quiser confirmar, o SQL está em `supabase/schema.sql`.)
+## Mudanças exatas
 
-## O que fazer
+### 1. Carregar wishlist e profile ao logar
+No `useEffect` que hoje só busca a coleção (o de `fetchSupabaseCollection`,
+linhas ~260-290), adicione DUAS buscas novas, DENTRO da função async, DEPOIS do
+bloco da coleção, reusando o mesmo `user` já obtido via `supabase.auth.getUser()`:
 
-### Wishlist
-1. Ao logar (dentro do fluxo que já busca a coleção), buscar também
-   `wishlist_items` do usuário (`.eq('user_id', user.id)`) e popular o estado
-   `wishlist`, gravando espelho no localStorage.
-2. Em `addCardToWishlist` e `removeCardFromWishlist`: além do localStorage já
-   existente, quando `supabase && currentUser` e há sessão, fazer `upsert`
-   (onConflict `'user_id,card_id'`) na inclusão e `delete` na remoção. Engula
-   erros de rede com `console.error` sem quebrar a UI (mesmo padrão da coleção).
+- **Wishlist:** `select('*').eq('user_id', user.id)` em `wishlist_items`. Mapear
+  para `WishlistItem` (`cardId: row.card_id`, `cardDetails: row.card_details`,
+  `addedAt: row.added_at`), fazer `setWishlist(...)` e espelhar no localStorage
+  (`localStorage.setItem('pokefan_wishlist', ...)`).
+- **Profile:** `select('*').eq('user_id', user.id).maybeSingle()` em `profiles`.
+  Se existir e os campos não forem vazios, aplicar: `setCurrencyState(row.currency)`
+  se houver, e atualizar `currentUser` com `username`/`avatar` do profile (sem
+  sobrescrever com valor vazio). NÃO chame as funções de auth — só os setters de
+  estado.
 
-### Profile
-3. Em `updateProfile` e em `setCurrency`: quando há sessão, fazer `upsert` em
-   `profiles` (onConflict `'user_id'`) com os campos disponíveis
-   (`username`, `avatar_url`, `currency`, `collector_rank`, `updated_at: now`).
-4. Ao logar, buscar o `profiles` do usuário e, se existir, aplicar
-   `username`/`avatar`/`currency` ao estado (sem sobrescrever com vazio).
+### 2. `addCardToWishlist` (linha ~613)
+Hoje só chama `saveWishlist`. Após isso, quando houver sessão, faça `upsert` do
+item novo em `wishlist_items` (onConflict `'user_id,card_id'`):
+```ts
+if (supabase && currentUser) {
+  const { data: { user } } = await supabase.auth.getUser();
+  if (user) {
+    await supabase.from('wishlist_items').upsert({
+      user_id: user.id, card_id: card.id,
+      card_details: card, added_at: new Date().toISOString()
+    }, { onConflict: 'user_id,card_id' });
+  }
+}
+```
+Torne a função `async`. Engula erro com `console.error` sem quebrar a UI.
 
-### Regras
-- Modo demonstração (convidado, sem sessão) continua SÓ localStorage — nunca
-  grava na nuvem. Verifique que há sessão real antes de qualquer chamada ao
-  Supabase (`supabase.auth.getUser()` retornando user), igual a coleção faz.
+### 3. `removeCardFromWishlist` (linha ~623)
+Após `saveWishlist`, quando houver sessão, `delete` em `wishlist_items`
+`.eq('user_id', user.id).eq('card_id', cardId)`. Torne `async`, engula erro.
+
+### 4. `updateProfile` (linha ~504)
+Existe um comentário `TODO(T14): persistir nome e avatar...`. Substitua o TODO
+por um upsert em `profiles` (onConflict `'user_id'`) com `username`,
+`avatar_url: avatar`, `updated_at: new Date().toISOString()`, quando há sessão.
+Torne `async`, engula erro.
+
+### 5. `setCurrency` (linha ~564)
+Após gravar no localStorage, quando há sessão, `upsert` em `profiles`
+(onConflict `'user_id'`) com `currency: curr` e `updated_at`. Torne `async`,
+engula erro.
+
+## Regras
+
+- Toda escrita na nuvem é precedida de `supabase.auth.getUser()` retornando user.
+  Convidado não dispara nenhuma chamada ao Supabase.
 - Comentário curto em cada bloco novo explicando o porquê.
+- Se tornar funções `async`, confirme que os pontos que as chamam não quebram
+  (elas não precisam ser aguardadas pela UI).
 
 ## Verificação
 
 - `npx tsc -b --pretty false` sai 0; `npm run build` passa.
-- Modo demonstração continua funcionando sem erro de console (não tenta gravar
-  na nuvem).
-- No relatório, descreva exatamente quais blocos você adicionou e confirme que
-  NÃO tocou em nenhuma das funções de auth listadas nos guardrails.
+- Modo demonstração (Acesso Rápido de Teste) funciona sem erro de console e sem
+  disparar chamadas ao Supabase.
+- No relatório: liste cada bloco adicionado e CONFIRME que nenhuma das funções de
+  auth dos guardrails foi tocada.
 
-## Critérios de aceite (o tech lead vai checar com atenção)
+## Critérios de aceite (o tech lead vai checar com lupa)
 
-- Diff limitado a adições de sync de wishlist/profile. Zero mudança nas funções
-  de auth e no fluxo de sessão.
-- Convidado não dispara escrita na nuvem.
-- upsert usa o `onConflict` correto de cada tabela.
-- O tech lead vai testar login real + wishlist/perfil persistindo entre sessões.
+- Diff só com adições de sync de wishlist/profile; zero mudança em auth/sessão.
+- Convidado não grava na nuvem.
+- `onConflict` correto por tabela (`user_id,card_id` e `user_id`).
+- O tech lead vai testar login real: adicionar à wishlist, mudar nome/moeda,
+  deslogar, logar em outro navegador e conferir que persistiu.
