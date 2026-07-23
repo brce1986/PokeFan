@@ -50,6 +50,8 @@ export interface TCGSet {
   };
 }
 
+import { catalogApi } from './catalogApi';
+
 const BASE_URL = 'https://api.pokemontcg.io/v2';
 
 // Opcionalmente permite usar uma chave de API para aumentar limites de requisições
@@ -98,6 +100,16 @@ export const pokemonApi = {
   },
 
   searchCards: async (nameQuery: string, page: number = 1, pageSize: number = 24): Promise<{ data: TCGCard[], totalCount: number }> => {
+    // 1ª opção: catálogo local no Supabase. Só entra se a tabela tiver dados;
+    // caso contrário cai direto para a API, sem quebrar durante a migração.
+    try {
+      if (await catalogApi.disponivel()) {
+        return await catalogApi.searchCards(nameQuery, page, pageSize);
+      }
+    } catch (error) {
+      console.warn("Busca no catálogo local falhou, tentando API", error);
+    }
+
     try {
       let q = '';
       if (nameQuery.includes('/')) {
@@ -150,6 +162,14 @@ export const pokemonApi = {
 
   // Obter cartas de um set específico
   getCardsBySet: async (setId: string, page: number = 1, pageSize: number = 100): Promise<{ data: TCGCard[], totalCount: number }> => {
+    try {
+      if (await catalogApi.disponivel()) {
+        return await catalogApi.getCardsBySet(setId, page, pageSize);
+      }
+    } catch (error) {
+      console.warn("Listagem do set no catálogo local falhou, tentando API", error);
+    }
+
     try {
       const result = await fetchFromAPI(`/cards?q=set.id:${setId}&page=${page}&pageSize=${pageSize}&orderBy=number`);
       return {
