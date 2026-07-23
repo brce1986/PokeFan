@@ -443,7 +443,10 @@ export const Onboarding: React.FC = () => {
       {/* Footer Terms */}
       <div className="w-full max-w-xs text-center z-10 pt-4">
         <p className="text-[10px] text-on-surface-variant/80 font-medium leading-relaxed">
-          Ao continuar, você concorda com nossos <span className="underline cursor-pointer hover:text-primary">Termos de Serviço</span> e <span className="underline cursor-pointer hover:text-primary">Política de Privacidade</span>.
+          Ao continuar, você concorda com nossos{' '}
+          <a href="/termos.html" target="_blank" rel="noopener noreferrer" className="underline hover:text-primary">Termos de Uso</a>
+          {' '}e{' '}
+          <a href="/privacidade.html" target="_blank" rel="noopener noreferrer" className="underline hover:text-primary">Política de Privacidade</a>.
         </p>
       </div>
     </div>
