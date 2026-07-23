@@ -12,6 +12,14 @@ dist
 dist-ssr
 *.local
 
+# Segredos — .env carrega a SUPABASE_SERVICE_ROLE_KEY
+.env
+.env.*
+!.env.example
+
+# Saída dos scripts de scraping
+liga_prices*.json
+
 # Editor directories and files
 .vscode/*
 !.vscode/extensions.json

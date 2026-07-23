@@ -201,11 +201,17 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
   useEffect(() => {
     const fetchSupabaseCollection = async () => {
       if (!supabase || !currentUser) return;
-      
+
+      // Filtro explícito por dono. A RLS já garante isso no banco; o .eq aqui
+      // é defesa em profundidade caso alguma policy saia do ar.
+      const { data: { user } } = await supabase.auth.getUser();
+      if (!user) return;
+
       const { data, error } = await supabase
         .from('collection_items')
-        .select('*');
-        
+        .select('*')
+        .eq('user_id', user.id);
+
       if (!error && data) {
         const formatted: CollectionItem[] = data.map((item: any) => ({
           id: item.id,
@@ -233,20 +239,25 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
       try {
         const { data: { user } } = await supabase.auth.getUser();
         if (user) {
-          // Upsert de todos os itens atuais
-          for (const item of newColl) {
+          // Upsert em lote: uma requisição, não uma por carta.
+          // onConflict precisa citar a PK composta (user_id, id) porque o `id`
+          // montado no client não é único entre usuários diferentes.
+          if (newColl.length > 0) {
             await supabase
               .from('collection_items')
-              .upsert({
-                id: item.id,
-                user_id: user.id,
-                card_id: item.cardId,
-                quantity: item.quantity,
-                condition: item.condition,
-                variant: item.variant,
-                added_at: item.addedAt,
-                card_details: item.cardDetails
-              });
+              .upsert(
+                newColl.map(item => ({
+                  id: item.id,
+                  user_id: user.id,
+                  card_id: item.cardId,
+                  quantity: item.quantity,
+                  condition: item.condition,
+                  variant: item.variant,
+                  added_at: item.addedAt,
+                  card_details: item.cardDetails
+                })),
+                { onConflict: 'user_id,id' }
+              );
           }
           
           // Limpar itens que foram excluídos localmente
